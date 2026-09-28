@@ -2,6 +2,7 @@
 
 int main(void)
 {
+    int i=2;
     while (1)
     {
     }
