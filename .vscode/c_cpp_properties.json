@@ -1,44 +1,67 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
 {
-  "configurations": [
-    {
-      "name": "linux-gcc-arm64",
-      "includePath": [
-        "${workspaceFolder}/**",
-        "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/include",
-        "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/src",
-        "/home/cir2001/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
-        "/home/cir2001/.platformio/packages/framework-cmsis-stm32g4/Include",
-        ""
-      ],
-      "browse": {
-        "limitSymbolsToIncludedHeaders": true,
-        "path": [
-          "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/include",
-          "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/src",
-          "/home/cir2001/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
-          "/home/cir2001/.platformio/packages/framework-cmsis-stm32g4/Include",
-          ""
-        ]
-      },
-      "defines": [
-        "PLATFORMIO=60200",
-        "STM32G4",
-        "STM32G4xx",
-        "STM32G431xx",
-        "STM32G431xx",
-        "F_CPU=170000000L",
-        ""
-      ],
-      "compilerPath": "/home/cir2001/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/bin/arm-none-eabi-gcc",
-      "compilerArgs": [
-        "-mthumb",
-        "-mcpu=cortex-m4",
-        ""
-      ],
-      "cStandard": "${default}",
-      "cppStandard": "${default}",
-      "intelliSenseMode": "linux-gcc-arm64"
-    }
-  ],
-  "version": 4
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/include",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/src",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/opamp",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/button",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/adc",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/foc",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/mt6826s",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/usart",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/timer",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/led",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/control",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/delay",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/sys",
+                "/home/cir2001/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
+                "/home/cir2001/.platformio/packages/framework-cmsis-stm32g4/Include",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/include",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/src",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/opamp",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/button",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/adc",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/foc",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/mt6826s",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/usart",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/timer",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/led",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/control",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/delay",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/sys",
+                    "/home/cir2001/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
+                    "/home/cir2001/.platformio/packages/framework-cmsis-stm32g4/Include",
+                    ""
+                ]
+            },
+            "defines": [
+                "PLATFORMIO=60200",
+                "STM32G4",
+                "STM32G4xx",
+                "STM32G431xx",
+                "STM32G431xx",
+                "F_CPU=170000000L",
+                ""
+            ],
+            "compilerPath": "/home/cir2001/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/bin/arm-none-eabi-gcc",
+            "compilerArgs": [
+                "-mthumb",
+                "-mcpu=cortex-m4",
+                ""
+            ]
+        }
+    ],
+    "version": 4
 }
