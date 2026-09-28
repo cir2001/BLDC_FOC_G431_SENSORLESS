@@ -1,1 +1,30 @@
-.pio
+# PlatformIO build
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# Build outputs
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.d
+
+# Temporary / backup files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Logs
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Secrets
+.env
+secrets.*
