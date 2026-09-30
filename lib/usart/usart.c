@@ -15,7 +15,7 @@ uint8_t UART2_RX_BUF[UART2_RX_BUF_SIZE]; // 接收缓冲区
 
 // 引用外部控制变量
 extern float move_speed_deg_per_s;
-extern uint8_t run_foc_flag;
+extern volatile uint8_t run_foc_flag;
 extern PID_Controller pid_pos; // 假设你的位置环 PID 结构体名为 pid_pos
 // --- 往复测试变量 ---
 extern uint8_t test_mode_en;    // 测试模式使能
@@ -188,30 +188,18 @@ void uart2_parse_command(char *buf) {
     float val = parse_float_manual(&buf[1]); // 使用手工版
 
     switch (cmd) {
-        case 'S':
-            move_speed_deg_per_s = val;
-            printf(">> Target Speed: %.2f deg/s\r\n", val);
-            break;
-        case 'P':
-            pid_pos.kp = val;
-            printf(">> Pos_Kp: %.3f\r\n", val);
-            break;
         case 'M':
-            run_foc_flag = (val > 0.5f) ? 1 : 0;
-            printf(">> Motor %s\r\n", run_foc_flag ? "ON" : "OFF");
-            break;
-        case 'T': // Test Mode: T1 开启, T0 关闭
+            Motor_Stop();
             if (val > 0.5f) {
-                test_mode_en = 1;
-                test_state = 1;           // 从正转开始
-                test_start_pos = actual_pos_rad; // 以当前位置为基准点
-                target_pos = actual_pos_rad;
-                printf(">> Test Mode START: 5 turns FWD/BWD\r\n");
+                printf(">> START disabled: sensorless angle not implemented.\r\n");
             } else {
-                test_mode_en = 0;
-                test_state = 0;
-                printf(">> Test Mode STOP\r\n");
+                printf(">> Motor OFF (MOE=0).\r\n");
             }
+            break;
+        case 'S':
+        case 'P':
+        case 'T':
+            printf(">> Encoder position/speed commands disabled in step 1.\r\n");
             break;
         default:
             // 这里可以打印出具体的字符 ASCII 码，看是否有隐藏字符

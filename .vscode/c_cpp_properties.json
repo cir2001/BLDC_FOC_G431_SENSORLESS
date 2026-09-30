@@ -13,8 +13,6 @@
                 "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/opamp",
                 "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/button",
                 "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/adc",
-                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/foc",
-                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/mt6826s",
                 "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/usart",
                 "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/timer",
                 "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/led",
@@ -23,6 +21,7 @@
                 "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/sys",
                 "/home/cir2001/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
                 "/home/cir2001/.platformio/packages/framework-cmsis-stm32g4/Include",
+                "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/foc",
                 ""
             ],
             "browse": {
@@ -33,8 +32,6 @@
                     "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/opamp",
                     "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/button",
                     "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/adc",
-                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/foc",
-                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/mt6826s",
                     "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/usart",
                     "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/timer",
                     "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/led",
@@ -43,6 +40,7 @@
                     "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/sys",
                     "/home/cir2001/.platformio/packages/framework-cmsis@2.50501.200527/CMSIS/Include",
                     "/home/cir2001/.platformio/packages/framework-cmsis-stm32g4/Include",
+                    "/home/cir2001/project/BLDC_FOC_G431_SENSORLESS/lib/foc",
                     ""
                 ]
             },

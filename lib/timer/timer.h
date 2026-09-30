@@ -15,7 +15,7 @@
 #define SQRT3 0.577350269f
 
 #define ENCODER_RESOLUTION 16384
-#define POLE_PAIRS         7 //10
+#define POLE_PAIRS         7 // 14 极 = 7 极对
 //---------------------------------------------
 typedef struct {
     float kp;
@@ -35,6 +35,7 @@ typedef union {
 } VofaData_t;
 //--------------------------------------------
 void TIM1_PWM_Init(u16 arr);
+void Motor_Stop(void);
 void SVPWM_Output_Standard(float Valpha, float Vbeta);
 float PID_Calc_Current(PID_Controller* pid, float target, float current);
 float PID_Calc_Speed(PID_Controller* pid, float target, float current);

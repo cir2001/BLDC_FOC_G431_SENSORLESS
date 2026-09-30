@@ -1,8 +1,6 @@
 #include "timer.h"
-// #include "as5047p.h"
 #include "led.h"
 #include <math.h>
-#include "align.h"
 #include "control.h"
 #include "math.h"
 #include "adc_foc.h"
@@ -27,7 +25,6 @@ float open_loop_angle = 0.0f;
 //外部变量声明
 //-----------------------------------------------
 extern PID_Controller vel_pid;
-extern int16_t my_zero_offset;// 14位机械偏置 (0-16383)
 extern float offset_u, offset_v, offset_w;
 
 // 用于主循环打印的调试变量
@@ -77,7 +74,6 @@ float sin_t, cos_t;        // 角度的正余弦值
 
 float elec_angle;
 
-int16_t raw_diff;
 
 // --- 变量定义 ---
 float target_speed = 0.0f;      // 目标速度 (单位: rad/s)
@@ -122,22 +118,15 @@ void TIM1_UP_TIM16_IRQHandler(void)
         TIM1->SR &= ~TIM_SR_UIF;
         Timer1_Counter++;
 
-        // 1. 获取 14 位机械角度
-        uint16_t raw_val = (uint16_t)(TIM4->CNT) & ENCODER_MASK;
-
-        // 2. 计算机械角度差（利用无符号数截断特性，无需 if 处理负数）
-        uint16_t mech_diff = (raw_val - (uint16_t)my_zero_offset) & ENCODER_MASK;
-
-        // 3. 计算电角度分量 (0 - 16383)
-        uint16_t elec_diff = (mech_diff * POLE_PAIRS) & ENCODER_MASK;
-
-        // 4. 转换为弧度 (0 - 2*PI)
-        float elec_angle = (float)elec_diff * 0.000383495197f; // 0.000383495197f = 2*PI / 16384
-
+        // 停止状态不进入电流环，更不能施加固定 d 轴电压。
+        if (run_foc_flag != 1) {
+            Motor_Stop();
+            return;
+        }
+        // 暂时占位，不代表真实转子角度；main 和串口均禁止启动。
+        // 后续先接强制电角度，再接无感观测角度。
+        elec_angle = 0.0f;
         debug_elec_angle = elec_angle;
-
-        // 机械角度弧度制 (用于速度环)
-        float current_mech_rad = (float)mech_diff * (6.2831853f / 16384.0f);
 
         // 电流环逻辑 (15kHz)
         // 1. 计算原始偏差（ADC值 - 你的静态偏置）
@@ -164,104 +153,8 @@ void TIM1_UP_TIM16_IRQHandler(void)
         debug_iv = iv;
         debug_iw = iw;
     //=============================================================================
-        // 速度环逻辑：15分频 (运行频率 1kHz)
-        // static uint16_t speed_cnt = 0;
-        // static float last_mech_angle = 0.0f;
-        // speed_cnt++;
-        // if (speed_cnt >= 15) 
-        // {
-        //     speed_cnt = 0;
-
-        //     // 1. 计算角度差
-        //     float delta_angle = current_mech_rad - last_mech_angle;
-            
-        //     // 2. 环形边界处理
-        //     if (delta_angle >  3.1415926f) delta_angle -= 6.2831853f;
-        //     else if (delta_angle < -3.1415926f) delta_angle += 6.2831853f;
-
-        //     // 3. 计算速度 (rad/s)
-        //     float instant_speed = delta_angle * 1000.0f; // rad/s
-
-        //     // 4. 速度滤波 (0.03 较平滑，若响应太慢可改至 0.05-0.1)
-        //     actual_speed_filt = (instant_speed * 0.05f) + (actual_speed_filt * 0.95f);
-            
-        //     // 5. 更新历史位置
-        //     last_mech_angle = current_mech_rad;
-
-        //     if (run_foc_flag) 
-        //     {
-        //         target_iq = PID_Calc_Speed(&pid_speed, target_speed, actual_speed_filt);
-        //         target_id = 0.0f;
-        //     }
-        // }
-    //=================================================================================
-        // 3. 【外环逻辑】位置环 + 速度环 (15分频 = 1kHz)
-        static uint16_t outer_loop_cnt = 0;
-        outer_loop_cnt++;
-        if (outer_loop_cnt >= 15) 
-        {
-            outer_loop_cnt = 0;
-
-            // A. 位置累加 (处理 0~2PI 跳变，实现多圈)
-            float delta_pos = current_mech_rad - last_mech_angle_for_pos;
-            if (delta_pos >  3.1415926f) delta_pos -= 6.2831853f;
-            else if (delta_pos < -3.1415926f) delta_pos += 6.2831853f;
-            actual_pos_rad += delta_pos; 
-            last_mech_angle_for_pos = current_mech_rad;
-
-            // B. 计算速度 (rad/s)
-            float instant_speed = delta_pos * 1000.0f; 
-            actual_speed_filt = (instant_speed * 0.05f) + (actual_speed_filt * 0.95f); // 低通滤波
-
-            // B. 自动测试状态机
-            if (run_foc_flag && test_mode_en) 
-            {
-                switch (test_state) 
-                {
-                    case 1: // 正转阶段
-                        target_pos += move_step;
-                        if (target_pos >= test_start_pos + test_target_range) {
-                            test_state = 2; // 到达5圈，切换反转
-                        }
-                        break;
-
-                    case 2: // 反转阶段
-                        target_pos -= move_step;
-                        if (target_pos <= test_start_pos) {
-                            test_state = 1; // 回到起点，切换正转
-                        }
-                        break;
-                }
-            }
-            else if (run_foc_flag && !test_mode_en) //if (run_foc_flag) 
-            {
-                // ================== 新增：慢速旋转目标生成 ==================
-                if(slow_rotation_en) 
-                {
-                    // 将 deg/s 转换为 rad/ms (因为控制周期是 1ms)
-                    // 公式：速度 * (PI/180) * 0.001
-                    float step = move_speed_deg_per_s * 0.0174533f * 0.001f;
-                    target_pos += step; 
-                }
-                // ==========================================================
-
-               
-            }
-            // else
-            // {
-            //     // 当电机未启动时，让目标位置跟随当前位置，防止启动瞬间“弹射”
-            //     target_pos = actual_pos_rad;
-            //     PID_Reset(&pid_pos); // 建议增加一个重置积分的函数
-            //     PID_Reset(&pid_speed);
-            // }
-            // === 位置环控制 ===
-            target_speed = PID_Calc_Pos(&pid_pos, target_pos, actual_pos_rad);
-
-            // === 速度环控制 ===
-            target_iq = PID_Calc_Speed(&pid_speed, target_speed, actual_speed_filt);
-            target_id = 0.0f;
-        }
-    //=================================================================================
+        // 编码器位置/速度反馈已移除，暂不运行外环。
+        // 电流 PI、Clarke/Park、逆 Park 和 SVPWM 保留原实现。
         // === zero offset 0位对齐 ===
         // elec_angle = 0.0f;          // U相测试 Vd=0.5, Vq=0 对应电角度 0度 (0.0f)
         // elec_angle = 2.094395f;     // V相测试 Vd=0.5, Vq=0 对应电角度 120度 (2.094395f)
@@ -320,7 +213,7 @@ void TIM1_UP_TIM16_IRQHandler(void)
         }
         else 
         {
-            Vd = 1.0f; 
+            Vd = 0.0f;
             Vq = 0.0f;
             // ======= 强制模式：预对齐 =======
             // Vd = 0.8f*0.5f; 
@@ -386,9 +279,7 @@ void TIM1_UP_TIM16_IRQHandler(void)
             Timer1_Counter = 0;
             LED0_TOGGLE();
             // printf("elec_angle:%.2f\r\n", debug_elec_angle);
-            // printf("CNT:%d|mech_diff:%d\r\n", TIM4->CNT,mech_diff);
             // printf("Target:%.2f, Act:%.2f\r\n",target_speed, actual_speed_filt);
-            // printf("current_mech_rad:%.2f\r\n", current_mech_rad);
             // printf("actual_speed:%.2f, target_iq:%.2f\r\n", actual_speed_filt, target_iq);
         }
     }
@@ -463,7 +354,7 @@ void TIM1_PWM_Init(u16 arr)
     // 9. 死区与主输出
     TIM1->BDTR &= ~TIM_BDTR_DTG;
     TIM1->BDTR |= 100; 
-    TIM1->BDTR |= TIM_BDTR_MOE; 
+    TIM1->BDTR &= ~TIM_BDTR_MOE; // 只启动计数器，禁止功率输出。
 
     // 11. 启动
     TIM1->EGR |= TIM_EGR_UG;   // 更新寄存器
@@ -632,3 +523,15 @@ void PID_Reset(PID_Controller* pid)
     // pid->last_error = 0.0f; 
 }
 
+
+// 清除功率输出使能，并停止控制中断；计数器仍可运行。
+void Motor_Stop(void)
+{
+    TIM1->BDTR &= ~TIM_BDTR_MOE;
+    TIM1->DIER &= ~TIM_DIER_UIE;
+    run_foc_flag = 0;
+    target_id = 0.0f;
+    target_iq = 0.0f;
+    Vd = 0.0f;
+    Vq = 0.0f;
+}
