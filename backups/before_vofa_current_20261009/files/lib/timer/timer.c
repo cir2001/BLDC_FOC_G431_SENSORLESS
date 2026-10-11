@@ -1,0 +1,705 @@
+#include "timer.h"
+#include "led.h"
+#include <math.h>
+#include "control.h"
+#include "math.h"
+#include "adc_foc.h"
+#include <stdio.h>
+#include "usart.h"
+//-----------------------------------------------------
+// --- 短时开环试验参数（12V、无桨；均为初始试验值） ---
+#define CURRENT_COUNTS_PER_AMP (-34.05f)
+#define OPEN_LOOP_MAX_MOD      (0.03f)  // 归一化幅值，12V下理想相电压峰值约0.156V
+#define OPEN_LOOP_TARGET_RPM   (30.0f) // 旋转磁场同步机械转速，不是实测转速
+#define OPEN_LOOP_TRIP_A       (2.0f)   // 标称软件保护，不能替代硬件限流
+#define OPEN_LOOP_ALIGN_TICKS  (4500U)  // 约0.3s，幅值从零渐增
+#define OPEN_LOOP_RAMP_TICKS   (15000U) // 约1s，从零加速
+#define OPEN_LOOP_TOTAL_TICKS  (30000U) // 约2s后关断（按15kHz）
+
+volatile MotorTestStatus motor_test_status = MOTOR_TEST_IDLE;
+static volatile uint8_t motor_test_ready = 0U;
+static volatile uint8_t motor_start_requested = 0U;
+static volatile uint8_t motor_fault_latched = 0U;
+static uint32_t open_loop_ticks = 0U;
+static uint32_t preflight_ticks = 0U;
+static uint32_t preflight_good = 0U;
+static float control_dt = 0.0f;
+static volatile float test_peak_a = 0.0f;
+static void Motor_Test_Trip(MotorTestStatus reason);
+static uint8_t Motor_OpenLoop_Start(void);
+
+
+//-------------------------------------------------
+// 双缓冲区
+VofaData_t DataLog[2][SAMPLE_NUM][FRAME_SIZE];
+
+volatile uint8_t  write_bank = 0;    // 当前正在写入哪个缓冲 (0 或 1)
+volatile uint32_t write_ptr = 0;     // 写入指针
+volatile uint8_t  bank_ready = 0xFF; // 哪一个缓冲准备好了发送 (0, 1 或 0xFF表示无)
+volatile uint8_t  is_dma_busy = 0;   // DMA 发送状态
+//-----------------------------------------------
+// 外部函数声明
+//-----------------------------------------------
+float open_loop_angle = 0.0f;
+//-----------------------------------------------
+//外部变量声明
+//-----------------------------------------------
+extern PID_Controller vel_pid;
+extern float offset_u, offset_v, offset_w;
+
+// 用于主循环打印的调试变量
+extern volatile float debug_id;
+extern volatile float debug_iq;
+extern volatile float debug_Vq;
+extern volatile float debug_Vd;
+
+extern volatile float debug_iu;
+extern volatile float debug_iv;
+extern volatile float debug_iw;
+
+volatile float debug_raw_u;
+volatile float debug_raw_v;
+volatile float debug_raw_w;
+
+volatile float debug_iu_filt;
+volatile float debug_iv_filt;
+volatile float debug_iw_filt;
+
+volatile float debug_Ialpha;
+volatile float debug_Ibeta;
+volatile float debug_iq_filt;
+volatile float debug_id_filt;
+volatile float debug_elec_angle;
+volatile float debug_Valpha;
+volatile float debug_Vbeta;
+
+volatile float debug_speed_act = 0;
+volatile float debug_iq_target = 0;
+//-----------------------------------------------
+extern PID_Controller pid_id;
+extern PID_Controller pid_iq;
+extern PID_Controller pid_speed;
+extern PID_Controller pid_pos;  
+
+extern volatile uint8_t run_foc_flag;
+//-----------------------------------------------
+// 变量声明
+//-----------------------------------------------
+u16 Timer1_Counter = 0;
+//--------------------------------------------
+float i_alpha, i_beta;      // Clark 变换结果
+float i_d, i_q;            // Park 变换结果
+float theta_elec = 0.0f;          // 电角度 (弧度)
+float sin_t, cos_t;        // 角度的正余弦值
+
+float elec_angle;
+
+
+// --- 变量定义 ---
+float target_speed = 0.0f;      // 目标速度 (单位: rad/s)
+float actual_speed_filt = 0.0f; // 实际速度 (滤波后)
+float target_iq = 0.0f;         // 速度环的输出，作为电流环的输入
+float target_id = 0.0f;      
+float target_pos;       // 目标位置 (rad)
+
+static float i_d_f = 0.0f, i_q_f = 0.0f; // 电流滤波变量
+
+volatile float Vd = 0.0f;
+volatile float Vq = 0.0f;
+volatile float force_angle = 0.0f; // 强制输出时的电角度
+volatile float Valpha;
+volatile float Vbeta;
+
+float open_loop_init_angle = 0.0f;
+float open_loop_Vq = 0.2f;     // 给 1.0V 电压，根据你的母线电压调整
+
+float actual_pos_rad = 0.0f;            // 实际累加位置 (rad, 多圈)
+float last_mech_angle_for_pos = 0.0f;   // 用于计算位置增量的上一次角度
+
+// --- 慢速旋转控制变量 ---
+float move_speed_deg_per_s = 100.0f; // 设定转速：每秒转多少度 (根据需要修改)
+uint8_t slow_rotation_en = 1;       // 慢速旋转使能开关
+
+// --- 往复测试变量 ---
+uint8_t test_mode_en = 0;    // 测试模式使能
+uint8_t test_state = 0;      // 0: 停止, 1: 正转中, 2: 反转中
+float test_start_pos = 0;    // 起始位置
+float test_target_range = 31.4159f; // 5圈的弧度
+float move_step = 0.1f;     // 每毫秒移动的步长（控制旋转速度）
+//-----------------------------------------------
+//==============================================
+// TIM1 更新中断服务函数
+//==============================================
+void TIM1_UP_TIM16_IRQHandler(void)
+{
+    if(TIM1->SR & TIM_SR_UIF)
+    {
+        // 立即清除中断标志
+        TIM1->SR &= ~TIM_SR_UIF;
+        Timer1_Counter++;
+
+        // 停止状态不进入电流环，更不能施加固定 d 轴电压。
+        if (run_foc_flag != 1) {
+            Motor_Stop();
+            return;
+        }
+        // 先验证采样，再计算输出。预检查时始终关闭MOE。
+        uint8_t preflight = (motor_test_status == MOTOR_TEST_PREFLIGHT);
+        if (preflight) ++preflight_ticks;
+        if ((ADC1->ISR & ADC_ISR_JEOS) == 0U ||
+            (ADC2->ISR & ADC_ISR_JEOS) == 0U) {
+            if (preflight && preflight_ticks < 8U) {
+                preflight_good = 0U;
+                ADC1->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+                ADC2->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+                return;
+            }
+            Motor_Test_Trip(MOTOR_TEST_ADC_FAULT);
+            return;
+        }
+
+        uint32_t sample_u = ADC1->JDR1 & 0x0FFFU;
+        uint32_t sample_v = ADC2->JDR1 & 0x0FFFU;
+        uint32_t sample_w = ADC2->JDR2 & 0x0FFFU;
+        if (sample_u <= 16U || sample_u >= 4079U ||
+            sample_v <= 16U || sample_v >= 4079U ||
+            sample_w <= 16U || sample_w >= 4079U) {
+            Motor_Test_Trip(MOTOR_TEST_ADC_RANGE);
+            return;
+        }
+
+        // 电流环逻辑 (15kHz)
+        // 1. 使用浮点相减，保留校准偏置的小数部分
+        float raw_u = (float)sample_u - offset_u;
+        float raw_v = (float)sample_v - offset_v;
+        float raw_w = (float)sample_w - offset_w;
+
+        // 必须同时清除 ADC1 和 ADC2 的标志位
+        ADC1->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC; 
+        ADC2->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+        
+        debug_raw_u = raw_u;
+        debug_raw_v = raw_v;
+        debug_raw_w = raw_w;
+
+        // 零序分量补偿（消除采样偏置漂移）
+        // 标称 counts/A：4096 * 0.003Ω * (4/7) * 16 / 3.3V ≈ 34.05。
+        // 输入网络：22kΩ || 2.2kΩ = 2kΩ，与1.5kΩ组成4/7分压。
+        // 负号约定逆变器流向电机为正；幅值和方向仍需已知电流实测核对。
+        const float LSB_PER_AMP = CURRENT_COUNTS_PER_AMP;
+        // 保护使用未滤波、未做零序补偿的独立相电流，避免掩盖异常。
+        float peak = fmaxf(fabsf(raw_u / LSB_PER_AMP),
+                          fmaxf(fabsf(raw_v / LSB_PER_AMP),
+                                fabsf(raw_w / LSB_PER_AMP)));
+        if (peak > test_peak_a) test_peak_a = peak;
+        if (peak >= OPEN_LOOP_TRIP_A) {
+            Motor_Test_Trip(MOTOR_TEST_OVERCURRENT);
+            return;
+        }
+
+        if (preflight) {
+            ++preflight_good;
+            if (preflight_good >= 3U) {
+                // 三次连续新采样通过；50%占空比已装载，才允许功率输出。
+                open_loop_ticks = 0U;
+                motor_test_status = MOTOR_TEST_ALIGN;
+                TIM1->BDTR |= TIM_BDTR_MOE;
+            } else if (preflight_ticks >= 8U) {
+                Motor_Test_Trip(MOTOR_TEST_ADC_FAULT);
+            }
+            return;
+        }
+
+        if (++open_loop_ticks >= OPEN_LOOP_TOTAL_TICKS) {
+            Motor_Stop();
+            motor_test_status = MOTOR_TEST_DONE;
+            return;
+        }
+        if (open_loop_ticks <= OPEN_LOOP_ALIGN_TICKS) {
+            open_loop_angle = 0.0f;
+            Vd = OPEN_LOOP_MAX_MOD * (float)open_loop_ticks /
+                 (float)OPEN_LOOP_ALIGN_TICKS;
+        } else {
+            uint32_t ramp_ticks = open_loop_ticks - OPEN_LOOP_ALIGN_TICKS;
+            float ramp = (ramp_ticks < OPEN_LOOP_RAMP_TICKS) ?
+                         (float)ramp_ticks / (float)OPEN_LOOP_RAMP_TICKS : 1.0f;
+            motor_test_status = (ramp < 1.0f) ? MOTOR_TEST_RAMP : MOTOR_TEST_RUN;
+            float omega_e = OPEN_LOOP_TARGET_RPM * (6.2831853f / 60.0f) * POLE_PAIRS;
+            open_loop_angle += omega_e * ramp * control_dt;
+            if (open_loop_angle >= 6.2831853f) open_loop_angle -= 6.2831853f;
+            Vd = OPEN_LOOP_MAX_MOD;
+        }
+        // 始终沿强制坐标的d轴施加电压，对齐到旋转过程中矢量连续。
+        // 此处d/q是强制坐标，不是已知转子坐标；不运行电流PI。
+        Vq = 0.0f;
+        elec_angle = open_loop_angle;
+        debug_elec_angle = elec_angle;
+        float com = (raw_u + raw_v + raw_w) * 0.3333333f;
+        float iu = ((float)raw_u - com) / LSB_PER_AMP;
+        float iv = ((float)raw_v - com) / LSB_PER_AMP;
+        float iw = ((float)raw_w - com) / LSB_PER_AMP;
+
+        debug_iu = iu;
+        debug_iv = iv;
+        debug_iw = iw;
+    //=============================================================================
+        // 编码器位置/速度反馈已移除，暂不运行外环。
+        // 电流 PI、Clarke/Park、逆 Park 和 SVPWM 保留原实现。
+        // === zero offset 0位对齐 ===
+        // elec_angle = 0.0f;          // U相测试 Vd=0.5, Vq=0 对应电角度 0度 (0.0f)
+        // elec_angle = 2.094395f;     // V相测试 Vd=0.5, Vq=0 对应电角度 120度 (2.094395f)
+        // elec_angle = 4.1887902f;    // W相测试 Vd=0.5, Vq=0 对应电角度 240度 (4.1887902f或-2.094395f)
+
+        // 动态测试，IU，Iv，Iw 验证线序，应该是正弦波，出峰先U再V然后W
+        // open_loop_angle += 0.0002f; // 步进值，控制旋转速度
+        // if (open_loop_angle > 6.2831853f) open_loop_angle -= 6.2831853f;
+        // if (open_loop_angle < 0.0f)       open_loop_angle += 6.2831853f; 
+
+        // 使用 CORDIC 计算 Sin/Cos
+        float st, ct;
+        CORDIC_SinCos(elec_angle, &st, &ct);
+        // CORDIC_SinCos(open_loop_angle, &st, &ct);
+
+        // Clark & Park 变换
+        // float i_alpha = iu;
+        // float i_beta = (iv - iw) * 0.5773503f;
+        float i_alpha = iu;
+        float i_beta = (iv - iw) * 0.57735027f;
+
+        debug_Ialpha = i_alpha;
+        debug_Ibeta = i_beta;
+
+        // Park 变换
+        float i_d = i_alpha * ct + i_beta * st;
+        float i_q = -i_alpha * st + i_beta * ct;
+
+        debug_id = i_d;
+        debug_iq = i_q;
+
+        // 电流低通滤波 
+        i_d_f = (i_d * 0.02f) + (i_d_f * 0.98f);
+        i_q_f = (i_q * 0.02f) + (i_q_f * 0.98f);
+
+        debug_iq_filt = i_q_f;
+        debug_id_filt = i_d_f;
+
+        // Vd/Vq已由上方开环斜坡给定；电流PI继续禁用。
+
+        debug_Vq = Vq;
+        debug_Vd = Vd;
+
+        //====== 逆变换与输出 ==========
+        // 逆 Park 变换
+        Valpha = Vd * ct - Vq * st;
+        Vbeta  = Vd * st + Vq * ct;
+
+        debug_Valpha = Valpha;
+        debug_Vbeta = Vbeta;
+        
+        // SVPWM 调制输出到寄存器
+        SVPWM_Output_Standard(Valpha, Vbeta);
+        
+        debug_speed_act = actual_speed_filt;
+        debug_iq_target = target_iq;
+
+        // --- 5. 数据记录逻辑 (增加 10 倍下采样) ---
+        static uint16_t log_downsample_cnt = 0; // 静态计数器
+        log_downsample_cnt++;
+
+        if (log_downsample_cnt >= 10) { // 每 10 次中断记录一次
+            log_downsample_cnt = 0;     // 重置计数器
+
+            // 如果当前缓冲区没在发送，就记录
+            if (bank_ready != write_bank) {
+                // DataLog[write_bank][write_ptr][0].f = debug_raw_u;
+                // DataLog[write_bank][write_ptr][1].f = debug_raw_v;
+                // DataLog[write_bank][write_ptr][2].f = debug_raw_w;
+
+                // DataLog[write_bank][write_ptr][0].f = debug_iu;
+                // DataLog[write_bank][write_ptr][1].f = debug_iv;
+                // DataLog[write_bank][write_ptr][2].f = debug_iw;
+
+                // DataLog[write_bank][write_ptr][0].f = TIM1->CCR1;
+                // DataLog[write_bank][write_ptr][1].f = TIM1->CCR2;
+                // DataLog[write_bank][write_ptr][2].f = TIM1->CCR3;
+
+                DataLog[write_bank][write_ptr][0].f = debug_iq_filt; 
+                DataLog[write_bank][write_ptr][1].f = debug_id_filt; 
+                DataLog[write_bank][write_ptr][2].f = debug_Vq; 
+
+                DataLog[write_bank][write_ptr][3].u = 0x7F800000;      // VOFA 结束符
+                
+                write_ptr++;
+                
+                if (write_ptr >= SAMPLE_NUM) {
+                    bank_ready = write_bank;  // 标记当前 Bank 已满
+                    write_bank = !write_bank; // 切换 Bank
+                    write_ptr = 0;            // 重置指针
+                }
+            }
+        }
+        // LED 翻转逻辑
+        if (Timer1_Counter >= 7500) 
+        { // 15kHz下，7500次是500ms
+            Timer1_Counter = 0;
+            // LED由主循环更新，避免两个位置同时翻转。
+            // printf("elec_angle:%.2f\r\n", debug_elec_angle);
+            // printf("Target:%.2f, Act:%.2f\r\n",target_speed, actual_speed_filt);
+            // printf("actual_speed:%.2f, target_iq:%.2f\r\n", actual_speed_filt, target_iq);
+        }
+    }
+}
+//==============================================
+// @brief  初始化 TIM1 产生中心对齐 PWM (避坑版)
+// @param  arr: 自动重装载值 (170MHz下, 5666对应15kHz)
+// @param  psc: 分频系数 (通常为0)
+//==============================================
+void TIM1_PWM_Init(u16 arr)
+{
+    // 1. 时钟开启
+    RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN | RCC_AHB2ENR_GPIOCEN;
+    RCC->APB2ENR |= RCC_APB2ENR_TIM1EN;
+
+    GPIO_Set(GPIOA,PIN8|PIN9|PIN10|PIN11|PIN12,GPIO_MODE_AF,GPIO_OTYPE_PP,GPIO_SPEED_170M,GPIO_PUPD_PU); 
+    GPIO_Set(GPIOB,PIN9|PIN15,GPIO_MODE_AF,GPIO_OTYPE_PP,GPIO_SPEED_170M,GPIO_PUPD_PU); 
+    GPIO_Set(GPIOC,PIN13,GPIO_MODE_AF,GPIO_OTYPE_PP,GPIO_SPEED_170M,GPIO_PUPD_PU); 
+
+    // 3. 复位 AF 映射 (AF6 为 TIM1)
+    GPIO_AF_Set(GPIOA, 8, 6); 
+    GPIO_AF_Set(GPIOA, 9, 6); 
+    GPIO_AF_Set(GPIOA, 10, 6);
+    GPIO_AF_Set(GPIOC, 13, 4); 
+    GPIO_AF_Set(GPIOA, 12, 6); 
+    GPIO_AF_Set(GPIOB, 15, 4);
+
+    //PA11 才是 TIM1_CH4，AF 映射为 6 TIM1_CH4用于示波器监测CCR4
+    GPIO_AF_Set(GPIOA, 11, 11);  // PA11 AF6 = TIM1_CH4
+
+    // 4. 基础设置
+    TIM1->ARR = arr;
+    TIM1->PSC = 0;
+    TIM1->RCR = 1; // 确保在波谷触发 Update 事件
+
+    // 6. 中心对齐模式 1
+    TIM1->CR1 &= ~TIM_CR1_CMS;
+    TIM1->CR1 |= (1 << TIM_CR1_CMS_Pos);
+
+    // 7. PWM 模式 1 配置
+    TIM1->CCMR1 &= ~(TIM_CCMR1_OC1M | TIM_CCMR1_OC2M);
+    TIM1->CCMR1 |= (6 << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE;
+    TIM1->CCMR1 |= (6 << TIM_CCMR1_OC2M_Pos) | TIM_CCMR1_OC2PE;
+    TIM1->CCMR2 &= ~TIM_CCMR2_OC3M;
+    TIM1->CCMR2 |= (6 << TIM_CCMR2_OC3M_Pos) | TIM_CCMR2_OC3PE;
+
+    // --- 配置 CH4 作为 ADC 触发源 ---
+    // TIM1->CCMR2 &= ~TIM_CCMR2_OC4M;
+    // TIM1->CCMR2 |= (6 << TIM_CCMR2_OC4M_Pos) | TIM_CCMR2_OC4PE; // CH4 同样设为 PWM 模式 1
+
+    //---示波器检测，如跳出ADC采样观测，屏蔽下面两条语句，恢复上面两条语句
+    // --- 【修改点 2】 配置 CH4 作为示波器观测和 ADC 触发 ---
+    // 建议改为 PWM 模式 2，这样在靠近 ARR (顶点) 时，PA11 会输出一个高电平窄脉冲
+    TIM1->CCMR2 &= ~(TIM_CCMR2_OC4M | (1U << 24));
+    // TIM1->CCMR2 |= (7 << TIM_CCMR2_OC4M_Pos) | TIM_CCMR2_OC4PE; // 7 = PWM Mode 2
+    TIM1->CCMR2 |= (7U << TIM_CCMR2_OC4M_Pos) | TIM_CCMR2_OC4PE;
+
+    // 初始触发位置：距离顶点 50 个计数值
+    // 这样 ADC 会在 CNT 向上计数到 (arr-50) 时触发，留给 ADC 转换一定的硬件建立时间
+    TIM1->CCR4 = arr - 100;
+
+    // 内部 OC4REF -> TRGO2 -> ADC1/2 注入组。
+    TIM1->CR2 &= ~TIM_CR2_MMS2;
+    TIM1->CR2 |= (7U << TIM_CR2_MMS2_Pos);
+
+    // 8. 使能输出
+    TIM1->CCER |= (TIM_CCER_CC1E | TIM_CCER_CC1NE | 
+                   TIM_CCER_CC2E | TIM_CCER_CC2NE | 
+                   TIM_CCER_CC3E | TIM_CCER_CC3NE | 
+                   TIM_CCER_CC4E);
+
+    // 9. 死区与主输出
+    TIM1->BDTR &= ~TIM_BDTR_DTG;
+    TIM1->BDTR |= 100; 
+    TIM1->BDTR &= ~TIM_BDTR_MOE; // 只启动计数器，禁止功率输出。
+
+    // 11. 启动
+    TIM1->EGR |= TIM_EGR_UG;   // 更新寄存器
+    TIM1->CR1 |= TIM_CR1_CEN;
+    
+    // 12. 中断配置
+    NVIC_SetPriority(TIM1_UP_TIM16_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 0, 0));  // 抢占优先级 0，子优先级 0
+    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+}
+
+void SVPWM_Output_Standard(float Valpha, float Vbeta)
+{
+    // 1. 模长限幅 (SVPWM 最大不失调模长为 1.1547)
+    float v_sq = Valpha * Valpha + Vbeta * Vbeta;
+    if (v_sq > 1.333f) { 
+        float inv_mod = 1.0f / sqrtf(v_sq);
+        Valpha *= (inv_mod * 1.154f);
+        Vbeta  *= (inv_mod * 1.154f);
+    }
+
+    // 2. 标准反克拉克变换 (修正 V/W 定义)
+    // U 相位于 0°，V 相位于 120°，W 相位于 240°
+    float U_u = Valpha;
+    float U_v = -0.5f * Valpha + 0.8660254f * Vbeta; // 修正：V相 Beta 项为正
+    float U_w = -0.5f * Valpha - 0.8660254f * Vbeta; // 修正：W相 Beta 项为负
+
+    // 3. 寻找极值
+    float max_v = U_u, min_v = U_u;
+    if (U_v > max_v) max_v = U_v; if (U_v < min_v) min_v = U_v;
+    if (U_w > max_v) max_v = U_w; if (U_w < min_v) min_v = U_w;
+
+    // 4. 注入零序分量
+    float V_offset = (max_v + min_v) * 0.5f;
+
+    // 5. 归一化映射 (你的 0.433 算法非常高效，予以保留)
+    float Ta = (U_u - V_offset + 1.154f) * 0.433f; 
+    float Tb = (U_v - V_offset + 1.154f) * 0.433f;
+    float Tc = (U_w - V_offset + 1.154f) * 0.433f;
+
+    // 6. 转换为计数值，并预留足够的低边导通时间用于采样 (Dead-time/Sampling Window)
+    uint16_t max_ccr = PWM_ARR - 200; 
+    uint16_t min_ccr = 200; // 必须预留最小关闭时间以保证 ADC 采样稳定
+
+    // 6. 转换为计数值并预留采样窗口
+    uint16_t ccr_u = (uint16_t)(Ta * PWM_ARR);
+    uint16_t ccr_v = (uint16_t)(Tb * PWM_ARR);
+    uint16_t ccr_w = (uint16_t)(Tc * PWM_ARR);
+
+    if (ccr_u > max_ccr) ccr_u = max_ccr;
+    if (ccr_v > max_ccr) ccr_v = max_ccr;
+    if (ccr_w > max_ccr) ccr_w = max_ccr;
+
+    // if (ccr_u < min_ccr) ccr_u = min_ccr;
+    // if (ccr_v < min_ccr) ccr_v = min_ccr;
+    // if (ccr_w < min_ccr) ccr_w = min_ccr;
+
+    // 7. 写入寄存器
+    TIM1->CCR1 = ccr_u;
+    TIM1->CCR2 = ccr_v;
+    TIM1->CCR3 = ccr_w;
+
+    // 8. 更新采样点 (CCR4 保持在波谷附近)
+    TIM1->CCR4 = (uint16_t)(PWM_ARR - 100);
+}
+
+/**
+ * @brief 抗饱和电流环 PID 计算
+ */
+float PID_Calc_Current(PID_Controller* pid, float target, float current)
+{
+    float error = target - current;
+    float dt = 0.0000666f; // 15kHz
+
+    // 1. 计算比例项
+    float p_term = pid->kp * error;
+
+    // 2. 预计算输出（用于抗饱和判定）
+    float next_integral = pid->integral + (error * pid->ki * dt);
+    float total_out = p_term + next_integral;
+
+    // 3. 动态抗饱和条件：
+    // 只有当输出未饱和，或者误差方向有助于脱离饱和时，才累加积分
+    if (total_out > -pid->output_limit && total_out < pid->output_limit) {
+        pid->integral = next_integral;
+    }
+
+    // 4. 积分项独立限幅（二次保险）
+    if (pid->integral > pid->output_limit) pid->integral = pid->output_limit;
+    else if (pid->integral < -pid->output_limit) pid->integral = -pid->output_limit;
+
+    // 5. 最终输出限幅
+    float out = p_term + pid->integral;
+    if (out > pid->output_limit) out = pid->output_limit;
+    else if (out < -pid->output_limit) out = -pid->output_limit;
+
+    return out;
+}
+
+float PID_Calc_Speed(PID_Controller* pid, float target, float current) 
+{
+    float error = target - current;
+    float dt = 0.001f;  
+        // 1. 计算 P 项
+    float p_term = pid->kp * error;
+
+    // 2. 计算 I 项（只有在输出未饱和时才累加，或者直接限幅）
+    pid->integral += error * pid->ki * dt;
+
+    // 限制积分项分量本身，通常设为 output_limit 的一半或全部
+    if (pid->integral > pid->output_limit) pid->integral = pid->output_limit;
+    if (pid->integral < -pid->output_limit) pid->integral = -pid->output_limit;
+
+    // 3. 总输出
+    float out = p_term + pid->integral;
+
+    // 4. 总输出限幅
+    if (out > pid->output_limit) out = pid->output_limit;
+    if (out < -pid->output_limit) out = -pid->output_limit;
+    
+    return out;
+}
+
+/**
+ * @brief 位置环 PID 计算
+ */
+float PID_Calc_Pos(PID_Controller* pid, float target, float current) {
+    // 1. 计算位置偏差
+    float error = target - current;
+
+    // 2. 比例项 (P)
+    float p_term = pid->kp * error;
+
+    // 3. 积分项 (I) - 通常为 0
+    pid->integral += error * pid->ki * 0.001f; // 1ms 周期
+
+    // 4. 总输出计算
+    float out = p_term + pid->integral;
+
+    // 5. 输出限幅 (限制最大寻道速度)
+    if (out > pid->output_limit) out = pid->output_limit;
+    else if (out < -pid->output_limit) out = -pid->output_limit;
+
+    return out;
+}
+
+void Motor_OpenLoop_Tick(void) {
+    // 1. 累加角度
+    open_loop_init_angle += 0.01f; // 步进值，控制旋转速度
+    if (open_loop_init_angle > 6.283185f) open_loop_init_angle -= 6.283185f;
+
+    // 2. 简单的反 Park / Space Vector (这里演示最简单的 Sine PWM)
+    float Ua = -open_loop_Vq * sinf(open_loop_init_angle);
+    float Ub =  open_loop_Vq * cosf(open_loop_init_angle);
+    
+    SVPWM_Output_Standard(Ua, Ub); 
+}
+
+/**
+ * @brief 重置 PID 控制器状态
+ * @param pid: 指向 PID 结构体的指针
+ */
+void PID_Reset(PID_Controller* pid) 
+{
+    pid->integral = 0.0f;
+    // 如果你的结构体中有 last_error (用于 D 项计算)，也应在此处清零
+    // pid->last_error = 0.0f; 
+}
+
+
+// 清除功率输出使能，并停止控制中断；计数器仍可运行。
+void Motor_Stop(void)
+{
+    TIM1->BDTR &= ~TIM_BDTR_MOE;
+    TIM1->DIER &= ~TIM_DIER_UIE;
+    run_foc_flag = 0;
+    motor_start_requested = 0U;
+    if (motor_test_status >= MOTOR_TEST_PREFLIGHT &&
+        motor_test_status <= MOTOR_TEST_RUN) {
+        motor_test_status = MOTOR_TEST_STOPPED;
+    }
+    target_id = 0.0f;
+    target_iq = 0.0f;
+    Vd = 0.0f;
+    Vq = 0.0f;
+}
+
+static void Motor_Test_Trip(MotorTestStatus reason)
+{
+    Motor_Stop();
+    motor_fault_latched = 1U;
+    motor_test_status = reason;
+}
+
+void Motor_Test_SetReady(uint8_t ready)
+{
+    // 仅在main初始化结束、校准及独立采样均完成后调用。
+    motor_test_ready = (ready != 0U);
+}
+
+void Motor_Test_RequestStart(void)
+{
+    // ISR仅投递请求；上电初始化中收到的命令不排队自动启动。
+    if (motor_test_ready && !motor_fault_latched && run_foc_flag == 0U) {
+        motor_start_requested = 1U;
+    }
+}
+
+static uint8_t Motor_OpenLoop_Start(void)
+{
+    // 短临界区避免M0在检查请求与准备启动之间被覆盖；无等待/打印。
+    uint32_t primask = __get_PRIMASK();
+    __disable_irq();
+    if (!motor_start_requested || !motor_test_ready || motor_fault_latched ||
+        run_foc_flag != 0U) {
+        __set_PRIMASK(primask);
+        return 0U;
+    }
+    Motor_Stop();
+    if (!(ADC1->CR & ADC_CR_ADEN) || !(ADC2->CR & ADC_CR_ADEN) ||
+        !(ADC1->CR & ADC_CR_JADSTART) || !(ADC2->CR & ADC_CR_JADSTART) ||
+        offset_u < 100.0f || offset_u > 3995.0f ||
+        offset_v < 100.0f || offset_v > 3995.0f ||
+        offset_w < 100.0f || offset_w > 3995.0f ||
+        TIM1->ARR != PWM_ARR_INT || TIM1->PSC != 0U || TIM1->RCR != 1U) {
+        Motor_Test_Trip(MOTOR_TEST_ADC_FAULT);
+        __set_PRIMASK(primask);
+        return 0U;
+    }
+
+    // 从上数起点重新定相；UG装载三相中点占空比与重复计数器。
+    TIM1->CR1 &= ~TIM_CR1_CEN;
+    TIM1->CR1 &= ~TIM_CR1_CMS;
+    TIM1->CR1 &= ~TIM_CR1_DIR;
+    TIM1->CNT = 0U;
+    TIM1->CR1 |= (1U << TIM_CR1_CMS_Pos);
+    TIM1->CCR1 = PWM_ARR_INT / 2U;
+    TIM1->CCR2 = PWM_ARR_INT / 2U;
+    TIM1->CCR3 = PWM_ARR_INT / 2U;
+    TIM1->EGR = TIM_EGR_UG;
+    TIM1->SR = 0U;
+    NVIC_ClearPendingIRQ(TIM1_UP_TIM16_IRQn);
+    ADC1->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+    ADC2->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+
+    open_loop_angle = 0.0f;
+    elec_angle = 0.0f;
+    open_loop_ticks = 0U;
+    preflight_ticks = preflight_good = 0U;
+    test_peak_a = 0.0f;
+    i_d_f = i_q_f = 0.0f;
+    pid_id.integral = pid_iq.integral = 0.0f;
+    control_dt = (2.0f * (float)TIM1->ARR) / 170000000.0f;
+    motor_test_status = MOTOR_TEST_PREFLIGHT;
+    run_foc_flag = 1U;
+    TIM1->DIER |= TIM_DIER_UIE;
+    TIM1->CR1 |= TIM_CR1_CEN;
+    // MOE仍为0，由中断中的采样预检查通过后开启。
+    __set_PRIMASK(primask);
+    return 1U;
+}
+
+void Motor_Test_Service(void)
+{
+    if (motor_start_requested) (void)Motor_OpenLoop_Start();
+    static MotorTestStatus last_status = MOTOR_TEST_IDLE;
+    MotorTestStatus status = motor_test_status;
+    if (status == last_status) return;
+    last_status = status;
+    const char *message;
+    switch (status) {
+        case MOTOR_TEST_PREFLIGHT: message = "PREFLIGHT (MOE=0)"; break;
+        case MOTOR_TEST_ALIGN: message = "ALIGN"; break;
+        case MOTOR_TEST_RAMP: message = "RAMP"; break;
+        case MOTOR_TEST_RUN: message = "RUN"; break;
+        case MOTOR_TEST_DONE: message = "DONE: time limit, output OFF"; break;
+        case MOTOR_TEST_STOPPED: message = "STOPPED: output OFF"; break;
+        case MOTOR_TEST_ADC_FAULT: message = "FAULT: ADC/timing, reset required"; break;
+        case MOTOR_TEST_ADC_RANGE: message = "FAULT: ADC near rail, reset required"; break;
+        case MOTOR_TEST_OVERCURRENT: message = "FAULT: current limit, reset required"; break;
+        default: message = "IDLE"; break;
+    }
+    printf("[OpenLoop] %s; peak=%.3fA (nominal)\r\n", message, (double)test_peak_a);
+}

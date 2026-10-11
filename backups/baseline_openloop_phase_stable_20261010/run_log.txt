@@ -1,0 +1,29 @@
+d0
+[VOFA] text mode; dropped=0 frames.
+[PostZero] samples=45000/45000 overlimit=0 status=10 MOE=0 UIE=0
+[PostZero] missing-data ISR1=00000000 ISR2=00000000
+[ZeroCompare] Last 1s of each 3s window; nominal A; same offsets.
+[ZeroCompare] before n=15000/15000 complete=1
+[ZeroCompare] before mean U=0.0014 V=0.0029 W=0.0094 SUM=0.0137
+[ZeroCompare] before p-p  U=0.2937 V=0.2349 W=0.2349 SUM=0.4699
+[ZeroCompare] after n=15000/15000 complete=1
+[ZeroCompare] after mean U=0.0145 V=0.0173 W=0.0126 SUM=0.0443
+[ZeroCompare] after p-p  U=0.2937 V=0.2937 W=0.2349 SUM=0.4699
+[ZeroCompare] delta(after-before) U=0.0131 V=0.0144 W=0.0031 SUM=0.0307
+[RunDiag] field=500.0rpm mod=0.058; peak nominal A; sampled stage at ISR entry
+[RunDiag] preflight n=3 peak=0.0867A
+[RunDiag] prezero n=45000 peak=0.1667A
+[RunDiag] align n=4501 peak=0.8871A
+[RunDiag] ramp n=44999 peak=2.9061A
+[RunDiag] run n=414914 peak=2.9942A
+[RunDiag] handoff n=0 peak=0.0000A
+[RunDiag] closed n=0 peak=0.0000A
+[RunDiag] postzero n=45000 peak=2.7408A
+[RunDiag] angle n=464414 bad=0 max_error=0.00000024rad
+[RunDiag] trig bad=0 norm_error=0.00000018 max_step=0.02443110
+[RunDiag] DWT_valid=1 calls=554418 body_max=3219cyc over_budget=0
+[RunDiag] entry_period min=11268 max=11405cyc expected=11332; 170cyc/us
+[PhaseDiag] 500rpm RUN steady window (n=30000/30000, complete=1):
+[PhaseDiag] phase_diff (open - smo): mean=1.3566rad (77.7deg), min=1.3461, max=1.3696
+[PhaseDiag] phase_diff P-P jitter=0.0235rad (1.34deg) -> PASS: PHASE LOCKED & STABLE
+[OpenLoop] STOPPED: output OFF; peak=2.994A (nominal)

@@ -1,0 +1,16 @@
+ M .vscode/c_cpp_properties.json
+ M handoff.md
+ M lib/adc/adc_foc.c
+ M lib/adc/adc_foc.h
+ M lib/control/control.c
+ M lib/opamp/opamp.c
+ M lib/timer/timer.c
+ M lib/timer/timer.h
+ M lib/usart/usart.c
+ M platformio.ini
+ M src/main.c
+?? "-ef | grep '[s]ocat'"
+?? DEBUG_STEPS.md
+?? backups/
+?? force_hard_float.py
+?? tests/

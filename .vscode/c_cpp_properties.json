@@ -55,6 +55,10 @@
             ],
             "compilerPath": "/home/cir2001/.platformio/packages/toolchain-gccarmnoneeabi@1.70201.0/bin/arm-none-eabi-gcc",
             "compilerArgs": [
+                "-mcpu=cortex-m4",
+                "-mthumb",
+                "-mfpu=fpv4-sp-d16",
+                "-mfloat-abi=hard",
                 "-mthumb",
                 "-mcpu=cortex-m4",
                 ""

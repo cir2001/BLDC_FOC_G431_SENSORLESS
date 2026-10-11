@@ -1,0 +1,16 @@
+#define OPEN_LOOP_ALIGN_MOD         (0.025f)  // 对齐期电压上限 (~0.8A)
+#define OPEN_LOOP_MAX_MOD           (0.058f)  // 稳态旋转电压上限 (维持稳定牵引)
+#define OPEN_LOOP_TARGET_RPM        (500.0f)  // 同步电磁转速 (RPM)
+#define OPEN_LOOP_TRIP_A            (4.5f)    // 软件保护电流阈值 (A)
+#define OPEN_LOOP_ALIGN_TICKS       (4500U)   // 对齐时间 0.3s
+#define OPEN_LOOP_RAMP_TICKS        (45000U)  // 加速时间 3.0s
+#define HANDOFF_WAIT_TICKS          (30000U)  // 稳态强拖 2.0s
+#define HANDOFF_RAMP_TICKS          (15000U)  // 切换融合时间 1.0s
+#define SMO_GAIN                    (0.40f)   // 滑模反电势增益
+#define SMO_E_BOUNDARY              (0.08f)   // 连续化边界
+#define SMO_LPF_FC                  (250.0f)  // 反电势滤波截止频率 250Hz
+#define PLL_KP                      (120.0f)  // PLL 比例增益
+#define PLL_KI                      (2500.0f) // PLL 积分增益
+#define V_BUS                       (12.0f)   // 母线直流电压 (V)
+#define SMO_RS                      (0.035f)
+#define SMO_LS                      (0.000015f)

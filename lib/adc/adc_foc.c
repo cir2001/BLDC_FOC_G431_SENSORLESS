@@ -20,13 +20,10 @@ void ADC_Init_Registers(void)
     delay_ms(10);
     RCC->AHB2RSTR &= ~(1U << 13);
 
-    // 2. --- 切换到同步时钟模式 ---
-    // 放弃 RCC_CCIPR 的异步配置，直接使用总线同步时钟
-    // 设置 CKMODE = 01 (HCLK/1)，即 ADC 运行在 170MHz
-    // 同时设置 PRESC = 0010 (即 4 分频，170/4 = 42.5MHz，非常理想的频率)
-    ADC12_COMMON->CCR = 0; // 先清空
-    ADC12_COMMON->CCR |= (3U << 16); // CKMODE = 01 (Sync HCLK/1)
-    ADC12_COMMON->CCR |= (2U << 18); // PRESC = 0010 (4分频)
+    // 2. --- 切换到同步时钟模式 (HCLK/4 = 42.5MHz) ---
+    // 设置 CKMODE = 11 (Sync HCLK/4)，此时 PRESC 位域无效保持为 0
+    ADC12_COMMON->CCR = 0;
+    ADC12_COMMON->CCR |= (3U << 16); 
     
     // 3. 开启调节器
     ADC1->CR &= ~(1U << 29); // DEEPPWD = 0
@@ -61,114 +58,199 @@ void ADC_Init_Registers(void)
     ADC2->CFGR2 &= ~ADC_CFGR2_JOVSE;
 
     // --- 采样时间优化配置 ---
-    // 目标：将采样时间压缩到 0.2us ~ 0.5us 左右
-    uint32_t smp_time = 3U; 
+    // 目标：将采样时间压缩到 0.2us ~ 0.5us 左右 (SMP=3: 24.5周期)
+    uint32_t smp_time = 2U; // 12.5 周期，转换耗时缩减约 40%
     ADC1->SMPR2 &= ~(7U << 9); 
     ADC1->SMPR2 |= (smp_time << 9); 
     ADC2->SMPR2 &= ~((7U << 18) | (7U << 24));
     ADC2->SMPR2 |= (smp_time << 18);
     ADC2->SMPR2 |= (smp_time << 24);
 
-    //----FGR 配置（最合适的位置）----
-    // 禁用注入队列模式（我们只用单次注入，不需要队列）
+    // ---- CFGR 配置 ----
+    // 禁用注入队列模式
     ADC1->CFGR |= ADC_CFGR_JQDIS;
     ADC2->CFGR |= ADC_CFGR_JQDIS;
 
-    // 关闭连续转换模式（注入组是触发式，不是连续）
+    // 关闭连续转换模式（注入组是硬件触发式）
     ADC1->CFGR &= ~ADC_CFGR_CONT;
     ADC2->CFGR &= ~ADC_CFGR_CONT;
 
     // --- 注入序列配置 ---
-    // ADC1 负责 Phase U (通道 13 = OPAMP1)
+    // ADC1 负责 Phase U (通道 13 = OPAMP1 输出)
     ADC1->JSQR = (0U << ADC_JSQR_JL_Pos)          // JL = 0 (1个转换)
-            | (1U << ADC_JSQR_JEXTSEL_Pos)    // TIM1_CH4 硬件触发
-            | (1U << ADC_JSQR_JEXTEN_Pos)      // JEXTEN = 01 → 上升沿触发（最稳）
-            | (13U << ADC_JSQR_JSQ1_Pos);      // JSQ1 = 通道 13 (Phase U)
+            | (8U << ADC_JSQR_JEXTSEL_Pos)        // TIM1_TRGO2 硬件触发
+            | (1U << ADC_JSQR_JEXTEN_Pos)         // JEXTEN = 01 -> 上升沿触发
+            | (13U << ADC_JSQR_JSQ1_Pos);         // JSQ1 = 通道 13 (Phase U)
 
-    // ADC2 负责 Phase V + W (通道 16=OPAMP2, 18=OPAMP3)
+    // ADC2 负责 Phase V + W (通道 16=OPAMP2 输出, 通道 18=OPAMP3 输出)
     ADC2->JSQR = (1U << ADC_JSQR_JL_Pos)          // JL = 1 (2个转换)
-            | (1U << ADC_JSQR_JEXTSEL_Pos)    //  TIM1_CH4 硬件触发
-            | (1U << ADC_JSQR_JEXTEN_Pos)      // 上升沿触发
-            | (16U << ADC_JSQR_JSQ1_Pos)       // JSQ1 = 通道 16 (Phase V)
-            | (18U << ADC_JSQR_JSQ2_Pos);      // JSQ2 = 通道 18 (Phase W)
+            | (8U << ADC_JSQR_JEXTSEL_Pos)        // TIM1_TRGO2 硬件触发
+            | (1U << ADC_JSQR_JEXTEN_Pos)         // 上升沿触发
+            | (16U << ADC_JSQR_JSQ1_Pos)          // JSQ1 = 通道 16 (Phase V)
+            | (18U << ADC_JSQR_JSQ2_Pos);         // JSQ2 = 通道 18 (Phase W)
 
     // --- 清除所有初始标志位 ---
     ADC1->ISR |= (ADC_ISR_JEOC | ADC_ISR_JEOS | ADC_ISR_EOC | ADC_ISR_OVR);
     ADC2->ISR |= (ADC_ISR_JEOC | ADC_ISR_JEOS | ADC_ISR_EOC | ADC_ISR_OVR);
-
 }
 
-void Calibrate_Current_Offset(void) 
+// 成功返回 1，失败返回 0；失败时保留旧偏置，调用者必须检查结果。
+// 保持 MOE=0，验证硬件触发采样。
+uint8_t Calibrate_Current_Offset(void)
 {
+    Motor_Stop();
+
+    if (!(ADC1->CR & ADC_CR_ADEN) ||
+        !(ADC2->CR & ADC_CR_ADEN)) {
+        printf("[Calib] FAILED: ADC not enabled.\r\n");
+        return 0;
+    }
+
     printf("[System] Starting Automatic Synchronous Calibration...\r\n");
     delay_ms(10);
 
-    // 确保 FOC 中断关闭，防止干扰校准过程
-    TIM1->DIER &= ~TIM_DIER_UIE;
-
-    // 使用 SVPWM 产生 50% 占空比 (零矢量)
-    // 输入 (0,0) 会让 Ta, Tb, Tc 都等于 0.5，从而产生 PWM_ARR/2 的占空比
     SVPWM_Output_Standard(0.0f, 0.0f);
-
-    TIM1->BDTR |= TIM_BDTR_MOE;
-    TIM1->CR1  |= TIM_CR1_CEN;
+    TIM1->BDTR &= ~TIM_BDTR_MOE;  // 测试期间禁止功率输出
+    TIM1->CR1 |= TIM_CR1_CEN;
     delay_ms(100);
 
-    // 确保 ADC 处于 Ready 状态且已使能
-    // 如果 ADC 没使能，JADSTART 是无效的
-    if (!(ADC1->CR & ADC_CR_ADEN) || !(ADC2->CR & ADC_CR_ADEN)) {
-        printf("[Error] ADC not enabled!\r\n");
-        return;
-    }
-
-    // 清除旧的标志位，确保开始时是干净的
-    ADC1->ISR |= (ADC_ISR_JEOS | ADC_ISR_JEOC);
-    ADC2->ISR |= (ADC_ISR_JEOS | ADC_ISR_JEOC);
-
-    // 启动 ADC 的硬件触发监听模式
-    // 只有执行了这一步，ADC 才会开始等待 CCR4 的上升沿
+    ADC1->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+    ADC2->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
     ADC1->CR |= ADC_CR_JADSTART;
     ADC2->CR |= ADC_CR_JADSTART;
-
     delay_ms(100);
 
-    uint32_t sum_u = 0, sum_v = 0, sum_w = 0;
-    int success_count = 0;
+    const uint32_t sample_count = 2000U;
+    uint32_t sum_u = 0U, sum_v = 0U, sum_w = 0U;
 
-    for(int i = 0; i < 2000; i++) 
-    {
-        uint32_t timeout = 200000;
-        // 等待硬件触发完成 (JEOS 代表整个序列转换完成)
-        while(!(ADC2->ISR & ADC_ISR_JEOS) && timeout--);
+    for (uint32_t i = 0U; i < sample_count; ++i) {
+        ADC1->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+        ADC2->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
 
-        if(timeout > 0) {
-            sum_u += ADC1->JDR1;
-            sum_v += ADC2->JDR1;
-            sum_w += ADC2->JDR2;
-            success_count++;
-            
-            // 清除标志位，ADC 会自动等待下一个 PWM 周期的 CCR4 信号
-            ADC1->ISR |= ADC_ISR_JEOS;
-            ADC2->ISR |= ADC_ISR_JEOS;
+        uint32_t timeout = 200000U;
+        while (((ADC1->ISR & ADC_ISR_JEOS) == 0U ||
+                (ADC2->ISR & ADC_ISR_JEOS) == 0U) &&
+               timeout > 0U) {
+            --timeout;
+        }
+
+        if (timeout == 0U) {
+            uint32_t adc1_isr = ADC1->ISR;
+            uint32_t adc2_isr = ADC2->ISR;
+            uint32_t adc1_cr  = ADC1->CR;
+            uint32_t adc2_cr  = ADC2->CR;
+            uint32_t tim_sr   = TIM1->SR;
+            uint32_t tim_cr1  = TIM1->CR1;
+            uint32_t tim_cnt  = TIM1->CNT;
+
+            Motor_Stop();
+
+            printf("[Calib] FAILED: ADC timeout at sample %lu.\r\n",
+                   (unsigned long)i);
+            delay_ms(10);
+
+            printf("ADC1 ISR=%08lX CR=%08lX JSQR=%08lX\r\n",
+                   (unsigned long)adc1_isr,
+                   (unsigned long)adc1_cr,
+                   (unsigned long)ADC1->JSQR);
+            delay_ms(10);
+
+            printf("ADC2 ISR=%08lX CR=%08lX JSQR=%08lX\r\n",
+                   (unsigned long)adc2_isr,
+                   (unsigned long)adc2_cr,
+                   (unsigned long)ADC2->JSQR);
+            delay_ms(10);
+
+            printf("TIM1 SR=%08lX CR1=%08lX CNT=%lu\r\n",
+                   (unsigned long)tim_sr,
+                   (unsigned long)tim_cr1,
+                   (unsigned long)tim_cnt);
+            delay_ms(10);
+
+            printf("TIM1 ARR=%lu CCR4=%lu CCER=%08lX\r\n",
+                   (unsigned long)TIM1->ARR,
+                   (unsigned long)TIM1->CCR4,
+                   (unsigned long)TIM1->CCER);
+            delay_ms(10);
+
+            return 0;
+        }
+
+        sum_u += ADC1->JDR1 & 0x0FFFU;
+        sum_v += ADC2->JDR1 & 0x0FFFU;
+        sum_w += ADC2->JDR2 & 0x0FFFU;
+    }
+
+    Motor_Stop();
+    offset_u = (float)sum_u / (float)sample_count;
+    offset_v = (float)sum_v / (float)sample_count;
+    offset_w = (float)sum_w / (float)sample_count;
+
+    printf("[Calib] OK: U=%.1f, V=%.1f, W=%.1f\r\n",
+           offset_u, offset_v, offset_w);
+    delay_ms(20);
+    return 1;
+}
+
+// 仅在偏置校准成功后调用；返回 1 只表示采集完成。
+uint8_t Check_Current_Zero(void)
+{
+    Motor_Stop();
+    if (!(ADC1->CR & ADC_CR_ADEN) ||
+        !(ADC2->CR & ADC_CR_ADEN)) {
+        printf("[Zero] FAILED: ADC not enabled.\r\n");
+        delay_ms(10);
+        return 0;
+    }
+
+    const uint32_t sample_count = 2000U;
+    const float offsets[3] = {offset_u, offset_v, offset_w};
+    uint32_t sums[3] = {0U, 0U, 0U};
+    uint32_t minima[3] = {4095U, 4095U, 4095U};
+    uint32_t maxima[3] = {0U, 0U, 0U};
+    const char phases[3] = {'U', 'V', 'W'};
+
+    for (uint32_t i = 0U; i < sample_count; ++i) {
+        ADC1->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+        ADC2->ISR = ADC_ISR_JEOS | ADC_ISR_JEOC;
+        uint32_t timeout = 200000U;
+        while (((ADC1->ISR & ADC_ISR_JEOS) == 0U ||
+                (ADC2->ISR & ADC_ISR_JEOS) == 0U) &&
+               timeout > 0U) {
+            --timeout;
+        }
+        if (timeout == 0U) {
+            Motor_Stop();
+            printf("[Zero] FAILED: ADC timeout at sample %lu.\r\n",
+                   (unsigned long)i);
+            delay_ms(10);
+            return 0;
+        }
+
+        const uint32_t raw[3] = {
+            ADC1->JDR1 & 0x0FFFU,
+            ADC2->JDR1 & 0x0FFFU,
+            ADC2->JDR2 & 0x0FFFU
+        };
+        for (uint32_t phase = 0U; phase < 3U; ++phase) {
+            sums[phase] += raw[phase];
+            if (raw[phase] < minima[phase]) minima[phase] = raw[phase];
+            if (raw[phase] > maxima[phase]) maxima[phase] = raw[phase];
         }
     }
 
-    // 停止监听（正式跑 FOC 时再开启）
-    // 注意：在正式 FOC 循环开始前，需再次执行 JADSTART 开启监听
-    if(success_count > 100) {
-        offset_u = (float)sum_u / success_count;
-        offset_v = (float)sum_v / success_count;
-        offset_w = (float)sum_w / success_count;
-        printf("[Calib] CCR Success! U:%.1f, V:%.1f, W:%.1f\r\n", offset_u, offset_v, offset_w);
-        delay_ms(50);
-    } else {
-        printf("[Calib] FAILED: No Hardware Triggers detected.\r\n");
-        delay_ms(50);
+    Motor_Stop();
+    printf("[Zero] Collected %lu fresh samples; unit=ADC counts.\r\n",
+           (unsigned long)sample_count);
+    delay_ms(10);
+    for (uint32_t phase = 0U; phase < 3U; ++phase) {
+        printf("[Zero] %c: mean=%.2f min=%.2f max=%.2f p-p=%lu\r\n",
+               phases[phase],
+               (float)sums[phase] / (float)sample_count - offsets[phase],
+               (float)minima[phase] - offsets[phase],
+               (float)maxima[phase] - offsets[phase],
+               (unsigned long)(maxima[phase] - minima[phase]));
+        delay_ms(10);
     }
-
-    // 校准完成，根据需要保持输出或关闭
-    // 建议：暂时关闭输出，直到正式进入 FOC 或对齐逻辑
-    TIM1->BDTR &= ~TIM_BDTR_MOE; 
-    delay_ms(20);
+    return 1;
 }
-

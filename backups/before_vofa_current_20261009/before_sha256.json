@@ -1,0 +1,7 @@
+{
+  "lib/timer/timer.c": "5b44d4a15e95a69b8272f5fd5fa6ac8d095d92c35fe3677033571d076b68babe",
+  "lib/timer/timer.h": "011232ad1ddf218bcda3e83aa2d21c1d7e1421c8d261ec4a148b215bc6cdfb04",
+  "lib/usart/usart.c": "99eda5de29453a1bc01e8fd74087e257fdb5f1001b8b8a7d39c53fc1181804ce",
+  "src/main.c": "63150bb13a5692b0c738382a7415aa8fb670cffa82a47d34ed6e45d35a4efebe",
+  "handoff.md": "5becb2f6883d906f39ef6775736d428f35bdef6fe09a542244c4ca3e79e42705"
+}

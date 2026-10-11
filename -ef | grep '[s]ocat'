@@ -1,0 +1,11 @@
+[0;1;32m●[0m g431-vofa.service - G431 ST-Link VCP to TCP for VOFA+
+     Loaded: loaded (]8;;file://t440/etc/systemd/system/g431-vofa.service/etc/systemd/system/g431-vofa.service]8;;; [0;1;32menabled[0m; preset: [0;1;32menabled[0m)
+     Active: [0;1;32mactive (running)[0m since Thu 2026-10-01 18:20:46 CST; 5s ago
+   Main PID: 4870 (socat)
+      Tasks: 1 (limit: 18858)
+     Memory: 720.0K (peak: 844.0K)
+        CPU: 3ms
+     CGroup: /system.slice/g431-vofa.service
+             └─[0;38;5;245m4870 /usr/bin/socat TCP-LISTEN:20000,bind=127.0.0.1,reuseaddr,fork FILE:/dev/serial/by-id/usb-STMicroelectronics_STM32_STLink_0673FF565357657287154428-if02,b921600,raw,echo=0[0m
+
+Oct 01 18:20:46 t440 systemd[1]: Started g431-vofa.service - G431 ST-Link VCP to TCP for VOFA+.

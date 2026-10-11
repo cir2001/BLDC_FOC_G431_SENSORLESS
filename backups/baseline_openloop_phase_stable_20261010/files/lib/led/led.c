@@ -1,0 +1,14 @@
+#include "led.h" 
+//////////////////////////////////////////////////////////////////////////////////	 
+//LED0 LED1配置						  
+////////////////////////////////////////////////////////////////////////////////// 	 
+//---- LED IO初始化 ----
+void LED_Init(void)
+{    	 
+	//--- PCB上的LED端口初始化  ---
+	RCC->AHB2ENR |= RCC_AHB2ENR_GPIOCEN; // 开启 GPIOC 钟
+
+	GPIO_Set(GPIOC,PIN6,GPIO_MODE_OUT,GPIO_OTYPE_PP,GPIO_SPEED_25M,GPIO_PUPD_PU); //PC6设置
+
+}
+
