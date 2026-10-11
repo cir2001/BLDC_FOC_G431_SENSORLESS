@@ -23,12 +23,12 @@
 #define COORD_ROTATION_DELTA_RAD    (0.1745f) // 10 度功角验证
 #define COORD_ROTATION_RAMP_TICKS   (22500U)  // 旋转过渡耗时 1.5s (22500 拍)
 
-// 受限速度—电压外环调节器配置
+// 候选基线：受限速度—电压外环调节器配置
 #define SPEED_ENABLE_LOOP           (1U)      // 1 = 使能受限速度微调环, 0 = 旁路
 #define SPEED_LOOP_DIVIDER          (30U)     // 15kHz / 30 = 500Hz 确定周期
 #define SPEED_LOOP_DT               (0.002f)  // 2.0 ms
-#define SPEED_KP                    (0.015f)  // 小比例先行
-#define SPEED_KI                    (0.002f)    // 初始积分置 0，验证调节方向后启用
+#define SPEED_KP                    (0.015f)  // 候选基线比例增益
+#define SPEED_KI                    (0.002f)  // 候选基线微积分增益
 #define SPEED_MAX_TRIM              (0.003f)  // 速度调节独立限幅 (+-0.003)
 #define SPEED_SLEW_RATE_LIMIT       (0.0001f) // 每拍 (2ms) 最大允许变化幅度
 #define GLOBAL_TOTAL_TRIM_LIMIT     (0.005f)  // 速度+电流总修正硬限幅 (+-0.005)
@@ -138,11 +138,14 @@ static uint8_t         static_align_active = 0U;
 static uint32_t        static_align_ticks = 0U;
 static ZeroWindowStats static_align_stats;
 
-// 受限速度—电压外环状态结构体
+// 受限速度—电压外环内部状态记录结构体
 typedef struct {
+    float   p_term;
     float   integral;
+    float   raw_output;
     float   last_output;
     uint8_t saturated;
+    uint8_t i_saturated;
 } SpeedLoop_t;
 static SpeedLoop_t spd_ctrl;
 static uint32_t    spd_div_cnt = 0U;
@@ -152,7 +155,8 @@ typedef struct {
     uint32_t samples;
     float    sum_id, min_id, max_id;
     float    sum_iq, min_iq, max_iq;
-    float    last_vd, last_vq;
+    float    last_rot_vd, last_rot_vq;
+    float    last_base_vd;
     float    last_speed_ratio;
     float    delta0;
     float    last_rot_delta;
@@ -162,7 +166,7 @@ typedef struct {
 } Closed_Overall_Stats_t;
 static volatile Closed_Overall_Stats_t closed_stats;
 
-// 在 Closed_Window_Stats_t 中替换/增加以下字段：
+// 局部采样窗口结构体 (30000 拍，约 2.0s)
 typedef struct {
     uint32_t samples;
     uint8_t  complete;
@@ -187,17 +191,21 @@ typedef struct {
     float    min_iq;
     float    max_iq;
     
-    // 明确记录：基准坐标系总电压与矢量幅值
-    float    sum_vd_base;
-    float    sum_v_mag;      // 定子电压矢量合成幅值 sqrt(Valpha^2 + Vbeta^2)
-    float    sum_p_cur_d;    // 基准坐标系电流阻尼
-    float    sum_spd_trim;   // 基准坐标系速度微调
-    float    sum_total_trim; // 基准坐标系总修正 (P_cur + Spd_trim)
-    uint32_t sat_count_total;
+    // 电压口径严格分离
+    float    sum_vd_base;     // 基准坐标系总直轴电压 (0.058 + Total_Trim)
+    float    sum_v_mag;       // 实际定子合成电压模长
+    float    sum_p_cur_d;     // 电流 P 阻尼
+    float    sum_spd_p;       // 速度环 P 项
+    float    sum_spd_i;       // 速度环 I 项
+    float    sum_spd_trim;    // 速度环最终输出
+    float    sum_total_trim;  // 基准总修正
+    uint32_t sat_count_spd_i; // 速度积分达到独立限幅 (+-0.003) 计数
+    uint32_t sat_count_total; // 全局总修正达到硬限幅 (+-0.005) 计数
 } Closed_Window_Stats_t;
 
-static volatile Closed_Window_Stats_t win_stats_early;
-static volatile Closed_Window_Stats_t win_stats_late;
+static volatile Closed_Window_Stats_t win_stats_early; // 1~3s (15000~44999 拍)
+static volatile Closed_Window_Stats_t win_stats_late;  // 4~6s (60000~89999 拍)
+static volatile Closed_Window_Stats_t win_stats_late2; // 8~10s (120000~149999 拍，更晚窗口)
 
 typedef struct {
     float    peak[10];
@@ -263,7 +271,8 @@ static void Motor_Vofa_Record(float ch0, float ch1, float ch2, float ch3, float 
 static void Motor_Vofa_Service(void);
 static void SMO_Update(float valpha, float vbeta, float ialpha, float ibeta, float dt);
 static void Update_Window_Stats(volatile Closed_Window_Stats_t *win, float ratio, float i_d, float i_q, 
-                                float vd, float vq, float p_d, float spd_trim, float total_trim);
+                                float vd_base, float v_mag, float p_cur_d, float spd_p, float spd_i,
+                                float spd_trim, float total_trim, uint8_t spd_i_sat);
 static float Speed_Loop_Step(float target_ratio, float current_ratio, uint8_t is_saturated);
 
 //=============================================================================
@@ -294,16 +303,17 @@ void TIM1_UP_TIM16_IRQHandler(void)
 static float Speed_Loop_Step(float target_ratio, float current_ratio, uint8_t is_saturated)
 {
 #if (SPEED_ENABLE_LOOP == 0U)
+    spd_ctrl.p_term = 0.0f;
     spd_ctrl.integral = 0.0f;
+    spd_ctrl.raw_output = 0.0f;
     spd_ctrl.last_output = 0.0f;
+    spd_ctrl.i_saturated = 0U;
     return 0.0f;
 #else
-    // 误差定义：目标比率 - 估算比率。
-    // 当自然升速(ratio > 1.0)时，error < 0，计算结果为负，产生退压动作
     float error = target_ratio - current_ratio;
-    float p_term = SPEED_KP * error;
+    spd_ctrl.p_term = SPEED_KP * error;
 
-    // 方向自适应抗饱和：全局输出已触碰总限幅且当前误差方向会继续加深饱和时冻结积分
+    // 抗饱和逻辑：当全局总修正已饱和且误差方向继续加深饱和时冻结积分
     uint8_t freeze_integral = 0U;
     if (is_saturated) {
         if ((spd_ctrl.last_output > 0.0f && error > 0.0f) ||
@@ -314,11 +324,21 @@ static float Speed_Loop_Step(float target_ratio, float current_ratio, uint8_t is
 
     if (!freeze_integral && SPEED_KI > 0.0f) {
         spd_ctrl.integral += (SPEED_KI * error) * SPEED_LOOP_DT;
-        if (spd_ctrl.integral >  SPEED_MAX_TRIM) spd_ctrl.integral =  SPEED_MAX_TRIM;
-        if (spd_ctrl.integral < -SPEED_MAX_TRIM) spd_ctrl.integral = -SPEED_MAX_TRIM;
+        // 独立积分限幅判定
+        if (spd_ctrl.integral > SPEED_MAX_TRIM) {
+            spd_ctrl.integral = SPEED_MAX_TRIM;
+            spd_ctrl.i_saturated = 1U;
+        } else if (spd_ctrl.integral < -SPEED_MAX_TRIM) {
+            spd_ctrl.integral = -SPEED_MAX_TRIM;
+            spd_ctrl.i_saturated = 1U;
+        } else {
+            spd_ctrl.i_saturated = 0U;
+        }
     }
 
-    float raw_out = p_term + spd_ctrl.integral;
+    float raw_out = spd_ctrl.p_term + spd_ctrl.integral;
+    spd_ctrl.raw_output = raw_out;
+
     if (raw_out >  SPEED_MAX_TRIM) raw_out =  SPEED_MAX_TRIM;
     if (raw_out < -SPEED_MAX_TRIM) raw_out = -SPEED_MAX_TRIM;
 
@@ -333,7 +353,8 @@ static float Speed_Loop_Step(float target_ratio, float current_ratio, uint8_t is
 }
 
 static void Update_Window_Stats(volatile Closed_Window_Stats_t *win, float ratio, float i_d, float i_q, 
-                                float vd_base, float v_mag, float p_cur_d, float spd_trim, float total_trim)
+                                float vd_base, float v_mag, float p_cur_d, float spd_p, float spd_i,
+                                float spd_trim, float total_trim, uint8_t spd_i_sat)
 {
     if (win->samples == 0U) {
         win->min_speed_ratio = win->max_speed_ratio = ratio;
@@ -351,6 +372,8 @@ static void Update_Window_Stats(volatile Closed_Window_Stats_t *win, float ratio
     }
 
     win->sum_speed_ratio += ratio;
+    
+    // 收集前 6000 拍 (0.4s) 与后 6000 拍 (0.4s) 的均值累加，用于演化方向斜率计算
     if (win->samples < 6000U) {
         win->head_sum_ratio += ratio;
     } else if (win->samples >= 24000U && win->samples < 30000U) {
@@ -364,8 +387,14 @@ static void Update_Window_Stats(volatile Closed_Window_Stats_t *win, float ratio
     win->sum_vd_base     += vd_base;
     win->sum_v_mag       += v_mag;
     win->sum_p_cur_d     += p_cur_d;
+    win->sum_spd_p       += spd_p;
+    win->sum_spd_i       += spd_i;
     win->sum_spd_trim    += spd_trim;
     win->sum_total_trim  += total_trim;
+
+    if (spd_i_sat) {
+        win->sat_count_spd_i++;
+    }
 
     if (fabsf(total_trim) >= (GLOBAL_TOTAL_TRIM_LIMIT - 0.00001f)) {
         win->sat_count_total++;
@@ -377,9 +406,6 @@ static void Update_Window_Stats(volatile Closed_Window_Stats_t *win, float ratio
     }
 }
 
-//=============================================================================
-// 7. 核心中断控制逻辑 (15kHz)
-//=============================================================================
 static void Motor_Control_Update(void)
 {
     TIM1->SR &= ~TIM_SR_UIF;
@@ -688,15 +714,20 @@ static void Motor_Control_Update(void)
             overspeed_counter = 0U;
 
             // 首拍无阶跃：清零速度调节器状态
+            spd_ctrl.p_term = 0.0f;
             spd_ctrl.integral = 0.0f;
+            spd_ctrl.raw_output = 0.0f;
             spd_ctrl.last_output = 0.0f;
             spd_ctrl.saturated = 0U;
+            spd_ctrl.i_saturated = 0U;
             spd_div_cnt = 0U;
 
             win_stats_early.latch_target_id = target_id;
             win_stats_early.latch_target_iq = target_iq;
             win_stats_late.latch_target_id  = target_id;
             win_stats_late.latch_target_iq  = target_iq;
+            win_stats_late2.latch_target_id = target_id;
+            win_stats_late2.latch_target_iq = target_iq;
 
             closed_initialized = 1U;
         }
@@ -730,7 +761,7 @@ static void Motor_Control_Update(void)
         // 标记全局限幅饱和状态供速度积分抗饱和逻辑使用
         spd_ctrl.saturated = (fabsf(total_trim_d - raw_total_trim_d) > 1e-6f) ? 1U : 0U;
 
-        // 4. 基准坐标系总合成电压
+        // 4. 基准坐标系总合成电压（解耦记录口径）
         vd_base = OPEN_LOOP_MAX_MOD + total_trim_d;
         vq_base = v_trim_cur_q;
 
@@ -766,27 +797,39 @@ static void Motor_Control_Update(void)
         }
         closed_stats.sum_id += i_d_rot;
         closed_stats.sum_iq += i_q_rot;
-        closed_stats.last_vd = Vd;
-        closed_stats.last_vq = Vq;
+        closed_stats.last_rot_vd = Vd;
+        closed_stats.last_rot_vq = Vq;
+        closed_stats.last_base_vd = vd_base;
         closed_stats.last_speed_ratio = cur_ratio;
         closed_stats.last_p_d = v_trim_cur_d;
         closed_stats.last_spd_trim = v_trim_spd;
         closed_stats.last_total_trim = total_trim_d;
         closed_stats.last_rot_delta = current_rot_delta;
 
-        // 逆 Park 变换：求定子电压静止坐标系合成矢量
+        // 逆 Park 变换：求定子电压静止坐标系合成矢量模长
         Valpha = Vd * ct - Vq * st;
         Vbeta  = Vd * st + Vq * ct;
         float v_mag = sqrtf(Valpha * Valpha + Vbeta * Vbeta);
 
+        // 窗口 1: 1~3s (15000~44999 拍)
         if (closed_stats.samples >= 15000U && win_stats_early.samples < 30000U) {
             Update_Window_Stats(&win_stats_early, cur_ratio, i_d_rot, i_q_rot, 
-                                vd_base, v_mag, v_trim_cur_d, v_trim_spd, total_trim_d);
+                                vd_base, v_mag, v_trim_cur_d, spd_ctrl.p_term, 
+                                spd_ctrl.integral, v_trim_spd, total_trim_d, spd_ctrl.i_saturated);
         }
 
+        // 窗口 2: 4~6s (60000~89999 拍)
         if (closed_stats.samples >= 60000U && win_stats_late.samples < 30000U) {
             Update_Window_Stats(&win_stats_late, cur_ratio, i_d_rot, i_q_rot, 
-                                vd_base, v_mag, v_trim_cur_d, v_trim_spd, total_trim_d);
+                                vd_base, v_mag, v_trim_cur_d, spd_ctrl.p_term, 
+                                spd_ctrl.integral, v_trim_spd, total_trim_d, spd_ctrl.i_saturated);
+        }
+
+        // 窗口 3: 8~10s (120000~149999 拍，更晚窗口)
+        if (closed_stats.samples >= 120000U && win_stats_late2.samples < 30000U) {
+            Update_Window_Stats(&win_stats_late2, cur_ratio, i_d_rot, i_q_rot, 
+                                vd_base, v_mag, v_trim_cur_d, spd_ctrl.p_term, 
+                                spd_ctrl.integral, v_trim_spd, total_trim_d, spd_ctrl.i_saturated);
         }
 
         closed_stats.samples++;
@@ -945,8 +988,8 @@ void SVPWM_Output_Standard(float va, float vb)
 
     float max_v = u_u, min_v = u_u;
     if (u_v > max_v) { max_v = u_v; }
-    if (u_w > max_v) { max_v = u_w; }
     if (u_v < min_v) { min_v = u_v; }
+    if (u_w > max_v) { max_v = u_w; }
     if (u_w < min_v) { min_v = u_w; }
 
     float v_offset = (max_v + min_v) * 0.5f;
@@ -1087,7 +1130,9 @@ static uint8_t Motor_OpenLoop_Start(void)
     uint32_t primask = __get_PRIMASK();
     __disable_irq();
 
-    if (run_foc_flag != 0U || motor_test_status != MOTOR_TEST_IDLE) {
+    // 允许在 IDLE 或正常停机 (STOPPED) 状态下直接响应二次启动，免去反复下载或复位
+    if (run_foc_flag != 0U || 
+       (motor_test_status != MOTOR_TEST_IDLE && motor_test_status != MOTOR_TEST_STOPPED)) {
         motor_start_requested = 0U;
         __set_PRIMASK(primask);
         return 0U;
@@ -1156,6 +1201,7 @@ static uint8_t Motor_OpenLoop_Start(void)
     memset((void*)&closed_stats, 0, sizeof(closed_stats));
     memset((void*)&win_stats_early, 0, sizeof(win_stats_early));
     memset((void*)&win_stats_late, 0, sizeof(win_stats_late));
+    memset((void*)&win_stats_late2, 0, sizeof(win_stats_late2));
 
     open_loop_angle = 0.0f;
     elec_angle = 0.0f;
@@ -1170,9 +1216,12 @@ static uint8_t Motor_OpenLoop_Start(void)
     handoff_delta_angle = 0.0f;
     closed_initialized = 0U;
 
+    spd_ctrl.p_term = 0.0f;
     spd_ctrl.integral = 0.0f;
+    spd_ctrl.raw_output = 0.0f;
     spd_ctrl.last_output = 0.0f;
     spd_ctrl.saturated = 0U;
+    spd_ctrl.i_saturated = 0U;
     spd_div_cnt = 0U;
 
     pid_id.integral = 0.0f;
@@ -1184,7 +1233,8 @@ static uint8_t Motor_OpenLoop_Start(void)
     vofa_text_requested = 0U;
     vofa_downsample = 0U;
     vofa_dropped = 0U;
-    motor_test_status = MOTOR_TEST_PREFLIGHT;
+    
+    motor_test_status = MOTOR_TEST_PREFLIGHT; // 显式重置为预检状态
     run_foc_flag = 1U;
     TIM1->DIER |= TIM_DIER_UIE;
     TIM1->CR1 |= TIM_CR1_CEN;
@@ -1210,7 +1260,7 @@ void Motor_Test_Service(void)
         case MOTOR_TEST_RAMP: message = "RAMP"; break;
         case MOTOR_TEST_RUN: message = "RUN"; break;
         case MOTOR_TEST_HANDOFF: message = "HANDOFF (Blending)"; break;
-        case MOTOR_TEST_CLOSED: message = "CLOSED LOOP (UnifiedCoord_SpdTrim)"; break;
+        case MOTOR_TEST_CLOSED: message = "CLOSED LOOP (Candidate_Baseline_SpdTrim)"; break;
         case MOTOR_TEST_DONE: message = "DONE: time limit, output OFF"; break;
         case MOTOR_TEST_STOPPED: message = "STOPPED: output OFF"; break;
         case MOTOR_TEST_ADC_FAULT: message = "FAULT: ADC/timing, reset required"; break;
@@ -1427,17 +1477,18 @@ static void Print_Window_Report(const char *label, volatile Closed_Window_Stats_
     float mean_id = win->sum_id * inv_w;
     float mean_iq = win->sum_iq * inv_w;
     
-    // 基准坐标系总电压与物理定子合成矢量幅值均值
+    // 基准坐标系总电压与实际定子合成电压模长
     float mean_vd_base = win->sum_vd_base * inv_w;
     float mean_v_mag   = win->sum_v_mag * inv_w;
     
-    // 各调节分量标量均值 (均在基准坐标系下)
+    // 各调节分量标量均值 (基准坐标系下)
     float mean_p_cur    = win->sum_p_cur_d * inv_w;
+    float mean_spd_p    = win->sum_spd_p * inv_w;
+    float mean_spd_i    = win->sum_spd_i * inv_w;
     float mean_spd_trim = win->sum_spd_trim * inv_w;
     float mean_total    = win->sum_total_trim * inv_w;
 
     // 计算带符号的真实速度演化率 (跨度 24000 拍 = 1.6 秒)
-    // 前 6000 拍 (中心点 3000) 到 后 6000 拍 (中心点 27000)
     float dir_rate = 0.0f;
     if (win->samples >= 30000U) {
         float head_mean = win->head_sum_ratio / 6000.0f;
@@ -1468,12 +1519,12 @@ static void Print_Window_Report(const char *label, volatile Closed_Window_Stats_
     printf("[%s] Iq(rot): mean=%.4fA, std=%.4fA, min=%.4fA, max=%.4fA, P-P=%.4fA\r\n", 
            label, mean_iq, std_iq, win->min_iq, win->max_iq, win->max_iq - win->min_iq);
     delay_ms(10);
-    printf("[%s] Base_Vd=%.4f, |V_alpha_beta|=%.4f (P_cur=%.5f, Spd_trim=%.5f, Total_Trim=%.5f)\r\n", 
+    printf("[%s] Base_Vd=%.4f, |V_alpha_beta|=%.4f (P_cur=%+.5f, Spd_trim=%+.5f [P=%+.5f, I=%+.5f], Total_Trim=%+.5f)\r\n", 
            label, (double)mean_vd_base, (double)mean_v_mag,
-           (double)mean_p_cur, (double)mean_spd_trim, (double)mean_total);
+           (double)mean_p_cur, (double)mean_spd_trim, (double)mean_spd_p, (double)mean_spd_i, (double)mean_total);
     delay_ms(10);
-    printf("[%s] Total Saturation hits: count=%lu (limit=+-0.005)\r\n", 
-           label, (unsigned long)win->sat_count_total);
+    printf("[%s] Saturation: Spd_I_sat=%lu (limit=+-0.003), Total_sat=%lu (limit=+-0.005)\r\n", 
+           label, (unsigned long)win->sat_count_spd_i, (unsigned long)win->sat_count_total);
 }
 
 static void Run_Diag_Report(void)
@@ -1484,10 +1535,11 @@ static void Run_Diag_Report(void)
     };
 
     delay_ms(10);
-    printf("[Compare] rpm=%.1f mode=UnifiedCoord_SpdTrim delta=%.4frad(%.1fdeg) P_Trim=%u SpdLoop=%u\r\n",
+    printf("[Compare] rpm=%.1f mode=Candidate_Baseline delta=%.4frad(%.1fdeg) P_Trim=%u SpdLoop=%u (Kp=%.3f, Ki=%.3f)\r\n",
            (double)OPEN_LOOP_TARGET_RPM,
            (double)COORD_ROTATION_DELTA_RAD, (double)(COORD_ROTATION_DELTA_RAD * 57.2957795f),
-           (unsigned)CLOSED_ENABLE_P_TRIM, (unsigned)SPEED_ENABLE_LOOP);
+           (unsigned)CLOSED_ENABLE_P_TRIM, (unsigned)SPEED_ENABLE_LOOP,
+           (double)SPEED_KP, (double)SPEED_KI);
 
     delay_ms(10);
     printf("[RunDiag] field=%.1frpm mod=%.3f; peak nominal A; sampled stage at ISR entry\r\n",
@@ -1552,9 +1604,15 @@ static void Run_Diag_Report(void)
                closed_stats.delta0, (double)(closed_stats.delta0 * 57.2957795f),
                closed_stats.last_rot_delta);
         delay_ms(10);
-        printf("[ClosedStats] Vd=%.4f (P_cur=%.5f, Spd_trim=%.5f, Total=%.5f) Vq=%.4f; speed_ratio=%.4f\r\n",
-               closed_stats.last_vd, closed_stats.last_p_d, closed_stats.last_spd_trim,
-               closed_stats.last_total_trim, closed_stats.last_vq, closed_stats.last_speed_ratio);
+        printf("[ClosedStats] Final Base: Base_Vd=%.4f (Total_Trim=%+.5f, P_cur=%+.5f, Spd_trim=%+.5f)\r\n",
+               closed_stats.last_base_vd, closed_stats.last_total_trim,
+               closed_stats.last_p_d, closed_stats.last_spd_trim);
+        delay_ms(10);
+        printf("[ClosedStats] Final Rot: Rot_Vd=%.4f, Rot_Vq=%.4f; speed_ratio=%.4f\r\n",
+               closed_stats.last_rot_vd, closed_stats.last_rot_vq, closed_stats.last_speed_ratio);
+        delay_ms(10);
+        printf("[ClosedStats] Final SpdLoop: P_term=%+.5f, I_term=%+.5f, Out=%+.5f\r\n",
+               spd_ctrl.p_term, spd_ctrl.integral, spd_ctrl.last_output);
         delay_ms(10);
         printf("[ClosedStats] Id(rot): mean=%.4fA, min=%.4fA, max=%.4fA, P-P=%.4fA\r\n",
                mean_id, closed_stats.min_id, closed_stats.max_id, closed_stats.max_id - closed_stats.min_id);
@@ -1563,8 +1621,9 @@ static void Run_Diag_Report(void)
                mean_iq, closed_stats.min_iq, closed_stats.max_iq, closed_stats.max_iq - closed_stats.min_iq);
     }
 
-    Print_Window_Report("ClosedWindowEarly", &win_stats_early);
-    Print_Window_Report("ClosedWindowLate",  &win_stats_late);
+    Print_Window_Report("ClosedWindowEarly",  &win_stats_early);
+    Print_Window_Report("ClosedWindowLate",   &win_stats_late);
+    Print_Window_Report("ClosedWindowLate2",  &win_stats_late2);
 }
 
 static void Static_Align_Report(void)
