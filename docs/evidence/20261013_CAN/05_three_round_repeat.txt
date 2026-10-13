@@ -1,0 +1,132 @@
+ial_STOP: target=0, max=1s
+   0.1s TX=1 RX=1 telemetry=(499, 1542, 12000, 10, 0) diag=None control=None soft=None
+
+startup_500: target=500, max=15s
+   1.1s TX=93 RX=1022 telemetry=(499, 1542, 12000, 10, 0) diag=(52, 10, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(1.741, False, 1)
+   2.1s TX=184 RX=2021 telemetry=(499, 1542, 12000, 2, 0) diag=(52, 2, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+   3.1s TX=277 RX=3020 telemetry=(499, 1542, 12000, 2, 0) diag=(52, 2, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+   4.1s TX=369 RX=4019 telemetry=(499, 1542, 12000, 2, 0) diag=(52, 2, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+   5.1s TX=461 RX=5018 telemetry=(499, 1542, 12000, 4, 0) diag=(53, 4, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+   6.1s TX=553 RX=6017 telemetry=(499, 1542, 12000, 4, 0) diag=(53, 4, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+   7.1s TX=645 RX=7016 telemetry=(499, 1542, 12000, 4, 0) diag=(53, 4, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+   8.1s TX=736 RX=8015 telemetry=(499, 1542, 12000, 5, 0) diag=(53, 5, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+   9.1s TX=828 RX=9013 telemetry=(499, 1542, 12000, 5, 0) diag=(53, 5, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(0.0, False, 0)
+
+hold_500: target=500, max=10.0s
+   9.4s TX=857 RX=9318 telemetry=(500, -1285, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000206, 0.0527, 0) soft=(2.656, False, 0)
+  10.4s TX=948 RX=10319 telemetry=(494, 867, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.0, 0.0525, 1) soft=(1.728, False, 0)
+  11.4s TX=1040 RX=11318 telemetry=(494, 1718, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.001049, 0.05354, 1) soft=(1.827, False, 0)
+  12.4s TX=1132 RX=12317 telemetry=(496, 1767, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000751, 0.05325, 1) soft=(1.862, False, 0)
+  13.4s TX=1224 RX=13316 telemetry=(498, 1445, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000565, 0.05306, 1) soft=(1.864, False, 0)
+  14.4s TX=1316 RX=14312 telemetry=(499, 1453, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000496, 0.05299, 1) soft=(1.713, False, 0)
+  15.4s TX=1408 RX=15312 telemetry=(499, 1577, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.00045, 0.05295, 1) soft=(1.797, False, 0)
+  16.4s TX=1500 RX=16311 telemetry=(499, 1650, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000453, 0.05295, 1) soft=(1.771, False, 0)
+  17.4s TX=1591 RX=17311 telemetry=(499, 1552, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000452, 0.05295, 1) soft=(1.705, False, 0)
+  18.4s TX=1683 RX=18310 telemetry=(499, 1712, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000467, 0.05296, 1) soft=(1.705, False, 0)
+STATS {"target": 500, "samples": 9984, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 499.02804206309463, "tail_mean_error_pct": -0.1943915873810738, "tail_max_abs_error_pct": 0.2, "peak_above_command_rpm": 0, "peak_below_command_rpm": 9, "control_samples": 500, "trim_sat_fraction": 0.0, "max_abs_trim": 0.001297, "tail_ramp_mean_rpm": 500.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.0, "phase_envelope_max_a": 2.656, "soft_entries_end": 0, "stage": "hold_500"}
+
+round_1_600: target=600, max=10.0s
+  19.4s TX=1776 RX=19303 telemetry=(500, 1272, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000407, 0.0529, 1) soft=(1.726, False, 0)
+  20.4s TX=1868 RX=20304 telemetry=(515, 2883, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(549.7, 0.006566, 0.06135, 1) soft=(2.976, False, 0)
+  21.4s TX=1960 RX=21303 telemetry=(543, 3420, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(595.3, 0.009221, 0.0661, 1) soft=(3.486, False, 1)
+  22.4s TX=2052 RX=22302 telemetry=(571, 2370, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.005472, 0.06257, 1) soft=(2.775, False, 2)
+  23.4s TX=2144 RX=23301 telemetry=(590, 1976, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.002926, 0.06002, 1) soft=(2.328, False, 2)
+  24.4s TX=2237 RX=24300 telemetry=(599, 1566, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.001515, 0.05861, 1) soft=(2.058, False, 2)
+  25.4s TX=2329 RX=25299 telemetry=(603, 1555, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000858, 0.05795, 1) soft=(1.824, False, 2)
+  26.4s TX=2421 RX=26298 telemetry=(604, 1385, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.00064, 0.05774, 1) soft=(1.777, False, 2)
+  27.4s TX=2513 RX=27297 telemetry=(604, 1343, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000538, 0.05763, 1) soft=(1.768, False, 2)
+  28.4s TX=2605 RX=28296 telemetry=(603, 1515, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000473, 0.05757, 1) soft=(1.749, False, 2)
+STATS {"target": 600, "samples": 9985, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 603.2378567851778, "tail_mean_error_pct": 0.5396427975296282, "tail_max_abs_error_pct": 0.6666666666666667, "peak_above_command_rpm": 4, "peak_below_command_rpm": 101, "control_samples": 499, "trim_sat_fraction": 0.0, "max_abs_trim": 0.009957, "tail_ramp_mean_rpm": 600.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.018, "phase_envelope_max_a": 3.623, "soft_entries_end": 2, "stage": "round_1_600"}
+
+round_1_500: target=500, max=10.0s
+  29.4s TX=2697 RX=29288 telemetry=(603, 1263, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000462, 0.05756, 1) soft=(1.773, False, 2)
+  30.4s TX=2789 RX=30290 telemetry=(575, 669, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(550.9, -0.003718, 0.05112, 1) soft=(0.756, False, 2)
+  31.4s TX=2880 RX=31289 telemetry=(526, 501, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.9, -0.004608, 0.04793, 1) soft=(0.613, False, 2)
+  32.4s TX=2972 RX=32288 telemetry=(502, 1238, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, -0.001232, 0.05126, 1) soft=(1.414, False, 2)
+  33.4s TX=3065 RX=33287 telemetry=(496, 1224, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, -0.000217, 0.05228, 1) soft=(1.605, False, 2)
+  34.4s TX=3157 RX=34286 telemetry=(495, 1273, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 8.9e-05, 0.05258, 1) soft=(1.713, False, 2)
+  35.4s TX=3249 RX=35285 telemetry=(495, 1413, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000255, 0.05275, 1) soft=(1.787, False, 2)
+  36.4s TX=3341 RX=36284 telemetry=(495, 1513, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000355, 0.05285, 1) soft=(1.739, False, 2)
+  37.4s TX=3433 RX=37283 telemetry=(496, 1413, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000372, 0.05287, 1) soft=(1.829, False, 2)
+  38.4s TX=3525 RX=38283 telemetry=(496, 1362, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000388, 0.05288, 1) soft=(1.73, False, 2)
+STATS {"target": 500, "samples": 9985, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 496.18227341011516, "tail_mean_error_pct": -0.7635453179769683, "tail_max_abs_error_pct": 0.8, "peak_above_command_rpm": 103, "peak_below_command_rpm": 5, "control_samples": 500, "trim_sat_fraction": 0.0, "max_abs_trim": 0.004608, "tail_ramp_mean_rpm": 500.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.0, "phase_envelope_max_a": 1.922, "soft_entries_end": 2, "stage": "round_1_500"}
+
+round_2_600: target=600, max=10.0s
+  39.4s TX=3617 RX=39272 telemetry=(497, 1589, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000395, 0.05289, 1) soft=(1.861, False, 2)
+  40.4s TX=3708 RX=40275 telemetry=(512, 2802, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(549.2, 0.006624, 0.06139, 1) soft=(2.966, False, 2)
+  41.4s TX=3800 RX=41274 telemetry=(540, 2800, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(593.6, 0.008674, 0.06548, 5) soft=(3.328, True, 4)
+  42.4s TX=3892 RX=42273 telemetry=(568, 2697, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.005599, 0.06269, 1) soft=(2.892, False, 4)
+  43.4s TX=3984 RX=43272 telemetry=(588, 1909, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.003041, 0.06014, 1) soft=(2.342, False, 4)
+  44.4s TX=4076 RX=44271 telemetry=(598, 1487, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.001623, 0.05872, 1) soft=(2.151, False, 4)
+  45.4s TX=4169 RX=45270 telemetry=(602, 1619, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000885, 0.05798, 1) soft=(1.961, False, 4)
+  46.4s TX=4261 RX=46269 telemetry=(603, 1550, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000587, 0.05768, 1) soft=(1.797, False, 4)
+  47.4s TX=4353 RX=47268 telemetry=(603, 1156, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000464, 0.05756, 1) soft=(1.788, False, 4)
+  48.4s TX=4445 RX=48267 telemetry=(603, 1526, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000475, 0.05757, 1) soft=(1.791, False, 4)
+STATS {"target": 600, "samples": 9987, "tail_samples": 1998, "tail_valid_fraction": 1.0, "tail_mean_rpm": 602.6566566566567, "tail_mean_error_pct": 0.44277610944277507, "tail_max_abs_error_pct": 0.5, "peak_above_command_rpm": 4, "peak_below_command_rpm": 103, "control_samples": 500, "trim_sat_fraction": 0.0, "max_abs_trim": 0.009769, "tail_ramp_mean_rpm": 600.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.018, "phase_envelope_max_a": 3.614, "soft_entries_end": 4, "stage": "round_2_600"}
+
+round_2_500: target=500, max=10.0s
+  49.4s TX=4538 RX=49260 telemetry=(602, 1420, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000474, 0.05757, 1) soft=(1.857, False, 4)
+  50.4s TX=4629 RX=50261 telemetry=(575, 569, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(550.4, -0.003724, 0.05109, 1) soft=(0.887, False, 4)
+  51.4s TX=4722 RX=51260 telemetry=(526, 426, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.3, -0.004589, 0.04792, 1) soft=(0.68, False, 4)
+  52.4s TX=4813 RX=52259 telemetry=(502, 1341, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, -0.001159, 0.05134, 1) soft=(1.406, False, 4)
+  53.4s TX=4906 RX=53258 telemetry=(497, 1453, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, -0.000268, 0.05223, 1) soft=(1.785, False, 4)
+  54.4s TX=4998 RX=54257 telemetry=(495, 1324, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 7e-05, 0.05257, 1) soft=(1.755, False, 4)
+  55.4s TX=5091 RX=55255 telemetry=(495, 1230, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000285, 0.05278, 1) soft=(1.711, False, 4)
+  56.4s TX=5182 RX=56253 telemetry=(495, 1597, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000338, 0.05283, 1) soft=(1.794, False, 4)
+  57.4s TX=5274 RX=57251 telemetry=(496, 1540, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000358, 0.05285, 1) soft=(1.788, False, 4)
+  58.4s TX=5366 RX=58249 telemetry=(496, 1460, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000393, 0.05289, 1) soft=(1.833, False, 4)
+STATS {"target": 500, "samples": 9984, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 496.14121181772657, "tail_mean_error_pct": -0.7717576364546858, "tail_max_abs_error_pct": 0.8, "peak_above_command_rpm": 102, "peak_below_command_rpm": 5, "control_samples": 499, "trim_sat_fraction": 0.0, "max_abs_trim": 0.004589, "tail_ramp_mean_rpm": 500.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.0, "phase_envelope_max_a": 1.922, "soft_entries_end": 4, "stage": "round_2_500"}
+
+round_3_600: target=600, max=10.0s
+  59.4s TX=5459 RX=59244 telemetry=(497, 1583, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000443, 0.05294, 1) soft=(1.756, False, 4)
+  60.4s TX=5550 RX=60244 telemetry=(511, 2667, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(548.9, 0.006629, 0.06138, 1) soft=(2.979, False, 4)
+  61.4s TX=5642 RX=61243 telemetry=(540, 3274, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(591.6, 0.007924, 0.06463, 1) soft=(3.286, False, 6)
+  62.4s TX=5734 RX=62242 telemetry=(569, 2275, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.005975, 0.06307, 1) soft=(2.908, False, 6)
+  63.4s TX=5826 RX=63241 telemetry=(589, 1744, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.003257, 0.06035, 1) soft=(2.406, False, 6)
+  64.4s TX=5918 RX=64240 telemetry=(600, 1722, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.001687, 0.05878, 1) soft=(2.067, False, 6)
+  65.4s TX=6009 RX=65238 telemetry=(604, 1574, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000955, 0.05805, 1) soft=(1.929, False, 6)
+  66.4s TX=6101 RX=66236 telemetry=(605, 1443, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000652, 0.05775, 1) soft=(1.932, False, 6)
+  67.4s TX=6193 RX=67234 telemetry=(604, 1518, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000528, 0.05762, 1) soft=(1.844, False, 6)
+  68.4s TX=6285 RX=68232 telemetry=(604, 1357, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000473, 0.05757, 1) soft=(1.945, False, 6)
+STATS {"target": 600, "samples": 9982, "tail_samples": 1996, "tail_valid_fraction": 1.0, "tail_mean_rpm": 603.7650300601202, "tail_mean_error_pct": 0.6275050100200398, "tail_max_abs_error_pct": 0.8333333333333334, "peak_above_command_rpm": 5, "peak_below_command_rpm": 103, "control_samples": 500, "trim_sat_fraction": 0.0, "max_abs_trim": 0.009439, "tail_ramp_mean_rpm": 600.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.01603206412825651, "phase_envelope_max_a": 3.573, "soft_entries_end": 6, "stage": "round_3_600"}
+
+round_3_500: target=500, max=10.0s
+  69.4s TX=6377 RX=69226 telemetry=(603, 1609, 12000, 7, 0) diag=(55, 7, 600, 50002) control=(600.0, 0.000466, 0.05756, 1) soft=(1.936, False, 6)
+  70.4s TX=6469 RX=70230 telemetry=(576, 684, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(550.7, -0.003682, 0.05115, 1) soft=(0.808, False, 6)
+  71.4s TX=6561 RX=71228 telemetry=(526, 547, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.6, -0.004598, 0.04793, 1) soft=(0.645, False, 6)
+  72.4s TX=6653 RX=72226 telemetry=(503, 1136, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, -0.00125, 0.05124, 1) soft=(1.435, False, 6)
+  73.4s TX=6745 RX=73223 telemetry=(497, 1225, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, -0.000256, 0.05224, 1) soft=(1.728, False, 6)
+  74.4s TX=6837 RX=74222 telemetry=(495, 1529, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 7.3e-05, 0.05257, 1) soft=(1.783, False, 6)
+  75.4s TX=6929 RX=75221 telemetry=(495, 1543, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000258, 0.05275, 1) soft=(1.746, False, 6)
+  76.4s TX=7022 RX=76220 telemetry=(495, 1520, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000364, 0.05286, 1) soft=(1.776, False, 6)
+  77.4s TX=7114 RX=77219 telemetry=(496, 1394, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000356, 0.05285, 1) soft=(1.865, False, 6)
+  78.4s TX=7206 RX=78218 telemetry=(497, 1419, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000366, 0.05286, 1) soft=(1.781, False, 6)
+STATS {"target": 500, "samples": 9987, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 496.5623435152729, "tail_mean_error_pct": -0.6875312969454171, "tail_max_abs_error_pct": 0.8, "peak_above_command_rpm": 103, "peak_below_command_rpm": 5, "control_samples": 500, "trim_sat_fraction": 0.0, "max_abs_trim": 0.004598, "tail_ramp_mean_rpm": 500.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.0, "phase_envelope_max_a": 1.924, "soft_entries_end": 6, "stage": "round_3_500"}
+
+final_hold_500: target=500, max=15.0s
+  79.4s TX=7298 RX=79213 telemetry=(497, 1547, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000398, 0.05289, 1) soft=(1.72, False, 6)
+  80.4s TX=7390 RX=80214 telemetry=(497, 1672, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000407, 0.0529, 1) soft=(1.723, False, 6)
+  81.4s TX=7482 RX=81213 telemetry=(498, 1344, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000411, 0.05291, 1) soft=(1.844, False, 6)
+  82.4s TX=7573 RX=82211 telemetry=(498, 1532, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000402, 0.0529, 1) soft=(1.738, False, 6)
+  83.4s TX=7665 RX=83210 telemetry=(498, 1434, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000374, 0.05287, 1) soft=(1.705, False, 6)
+  84.4s TX=7757 RX=84208 telemetry=(499, 1619, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000354, 0.05285, 1) soft=(1.755, False, 6)
+  85.4s TX=7849 RX=85207 telemetry=(499, 1320, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000374, 0.05287, 1) soft=(1.75, False, 6)
+  86.4s TX=7942 RX=86206 telemetry=(499, 1409, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000415, 0.05291, 1) soft=(1.726, False, 6)
+  87.4s TX=8034 RX=87205 telemetry=(499, 1397, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000413, 0.05291, 1) soft=(1.815, False, 6)
+  88.4s TX=8125 RX=88204 telemetry=(499, 1502, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000406, 0.0529, 1) soft=(1.703, False, 6)
+  89.4s TX=8217 RX=89203 telemetry=(499, 1594, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000377, 0.05287, 1) soft=(1.736, False, 6)
+  90.4s TX=8309 RX=90202 telemetry=(499, 1470, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000387, 0.05288, 1) soft=(1.739, False, 6)
+  91.4s TX=8402 RX=91200 telemetry=(499, 1419, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000417, 0.05291, 1) soft=(1.739, False, 6)
+  92.4s TX=8494 RX=92197 telemetry=(499, 1500, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000381, 0.05288, 1) soft=(1.787, False, 6)
+  93.4s TX=8586 RX=93196 telemetry=(499, 1534, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000397, 0.05289, 1) soft=(1.82, False, 6)
+STATS {"target": 500, "samples": 14973, "tail_samples": 1996, "tail_valid_fraction": 1.0, "tail_mean_rpm": 499.4068136272545, "tail_mean_error_pct": -0.11863727454909849, "tail_max_abs_error_pct": 0.2, "peak_above_command_rpm": 0, "peak_below_command_rpm": 3, "control_samples": 749, "trim_sat_fraction": 0.0, "max_abs_trim": 0.000457, "tail_ramp_mean_rpm": 500.0, "tail_ramp_at_command_fraction": 1.0, "soft_active_fraction": 0.0, "phase_envelope_max_a": 1.925, "soft_entries_end": 6, "stage": "final_hold_500"}
+
+link_loss: target=500, max=5s
+  94.4s TX=8678 RX=94185 telemetry=(500, 1627, 12000, 7, 0) diag=(55, 7, 500, 50002) control=(500.0, 0.000332, 0.05283, 1) soft=(1.762, False, 6)
+  95.4s TX=8678 RX=95190 telemetry=(500, 1590, 12000, 8, 0) diag=(56, 8, 500, 50002) control=(500.0, 0.000338, 0.05283, 0) soft=(1.742, False, 6)
+  96.4s TX=8678 RX=96189 telemetry=(500, 1590, 12000, 8, 0) diag=(56, 8, 500, 50002) control=(500.0, 0.000338, 0.05283, 0) soft=(1.742, False, 6)
+  97.4s TX=8678 RX=97188 telemetry=(500, 1590, 12000, 8, 0) diag=(56, 8, 500, 50002) control=(500.0, 0.000338, 0.05283, 0) soft=(1.742, False, 6)
+  98.4s TX=8678 RX=98187 telemetry=(500, 1590, 12000, 10, 0) diag=(56, 10, 500, 50002) control=(500.0, 0.000338, 0.05283, 0) soft=(1.742, False, 6)
+completed; review tracking metrics (not automatic performance acceptance)
+Logs: C:\Users\Administrator\Downloads\T440p-Code\BLDC_FOC_G431_SENSORLESS_20261013-221551\can_sweep_logs\20261013_221613_509565
+PS C:\Users\Administrator\Downloads\T440p-Code\BLDC_FOC_G431_SENSORLESS_20261013-221551>

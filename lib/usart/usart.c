@@ -5,6 +5,7 @@
 #include "led.h"    
 #include <string.h>
 #include "timer.h"
+#include "fdcan.h"
 
 #define FLASH_SAVE_ADDR  0X08010000 	
 u16 FalshSave[32];
@@ -142,51 +143,84 @@ int _write(int file, char *ptr, int len)
 }
 
 void uart2_parse_command(char *buf) {
+    if (buf == NULL || buf[0] == '\0') return;
+
     char cmd = buf[0];
     float val = parse_float_manual(&buf[1]); 
 
     switch (cmd) {
         case 'm':
         case 'M':
+            #if (CAN_PHASE1_PASSIVE_TEST == 1U)
             if (val > 0.5f) {
-                Motor_Test_RequestStart();
+                printf("[Cmd Ignored] In CAN Phase-1 Passive Mode: Hardware MOE locked to 0!\r\n");
             } else {
                 Motor_Test_RequestStop();
+                printf("[Cmd] Motor Stopped\r\n");
             }
+            #else
+            if (val > 200.0f) {
+                Motor_Set_Target_RPM(val);
+                printf("[Cmd] Target RPM updated -> %.1f RPM\r\n", (double)val);
+            } else if (val > 0.5f) {
+                Motor_Set_Target_RPM(500.0f);
+                Motor_Test_RequestStart();
+                printf("[Cmd] Motor Started (Base 500 RPM)\r\n");
+            } else {
+                Motor_Test_RequestStop();
+                printf("[Cmd] Motor Stopped\r\n");
+            }
+            #endif
             break;
         case 'o':
         case 'O':
-            // 修正：容错判定，避免 val == 1.0f 浮点精度失效
             if (val > 0.5f && val < 1.5f) Motor_Test_RequestOpen();
             break;
+
         case 'h':
         case 'H':
-            // 修正：容错判定，避免 val == 1.0f 浮点精度失效
             if (val > 0.5f && val < 1.5f) Motor_Test_RequestAngle();
             break;
-        case 'f':
-        case 'F':
-            if (val == 450.0f) Motor_Test_RequestComparison(450U, 0U);
-            else if (val == 500.0f) Motor_Test_RequestComparison(500U, 0U);
-            else if (val == 550.0f) Motor_Test_RequestComparison(550U, 0U);
-            break;
-        case 'c':
-        case 'C':
-            if (val == 500.0f) Motor_Test_RequestComparison(500U, 1U);
-            break;
+
         case 'a':
         case 'A':
             if (val > 0.5f && val < 1.5f) Motor_Test_RequestStaticAlign();
             break;
+
+        case 'c':
+        case 'C':
+            if (val < 0.5f) FDCAN1_RequestDiag();
+            break;
+
         case 'd':
         case 'D':
             if (val < 0.5f) Motor_Vofa_RequestText();
             break;
+
+        // 【关键修复】开放 s / S 指令，用于多转速阶跃测试
+        case 's':
         case 'S':
-        case 'P':
-        case 'T':
-            printf(">> Encoder position/speed commands disabled in step 1.\r\n");
+            if (val >= 300.0f && val <= 800.0f) {
+                Motor_Set_Target_RPM(val);
+                printf("[Cmd] Target RPM -> %.1f RPM (Ratio=%.3f)\r\n", (double)val, (double)(val / 500.0f));
+            } else {
+                printf("[Cmd] Target RPM out of range (300 ~ 800 RPM): %.1f\r\n", (double)val);
+            }
             break;
+
+        // 遥测快照查询
+        case 't':
+        case 'T': {
+            Actuator_Telemetry_t telem;
+            Motor_Get_Telemetry(&telem);
+            float err_pct = (telem.target_rpm > 1.0f) ? 
+                            ((telem.actual_rpm - telem.target_rpm) / telem.target_rpm * 100.0f) : 0.0f;
+            printf("[Telemetry] Target=%.1f RPM, Actual=%.1f RPM (Err=%+.2f%%), Iq=%.3fA, Base_Vd=%.4f, Trim=%.5f, Stat=%u\r\n",
+                   (double)telem.target_rpm, (double)telem.actual_rpm, (double)err_pct,
+                   (double)telem.i_q, (double)telem.base_vd, (double)telem.v_trim, (unsigned int)telem.status);
+            break;
+        }
+
         default:
             printf("?? Unknown Cmd: %c (0x%02X)\r\n", cmd, cmd);
             break;

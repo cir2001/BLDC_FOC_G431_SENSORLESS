@@ -1,0 +1,139 @@
+initial_STOP: target=0, max=1s
+   0.1s TX=1 RX=1 telemetry=(0, 0, 12000, 0, 0) diag=None
+
+startup_500: target=500, max=15s
+   1.1s TX=93 RX=1021 telemetry=(0, 0, 12000, 0, 0) diag=(4, 0, 500, 0)
+   2.1s TX=184 RX=2020 telemetry=(0, 0, 12000, 2, 0) diag=(4, 2, 500, 0)
+   3.1s TX=276 RX=3019 telemetry=(0, 0, 12000, 2, 0) diag=(4, 2, 500, 0)
+   4.1s TX=369 RX=4018 telemetry=(0, 0, 12000, 2, 0) diag=(4, 2, 500, 0)
+   5.1s TX=460 RX=5017 telemetry=(0, 0, 12000, 4, 0) diag=(5, 4, 500, 0)
+   6.1s TX=552 RX=6016 telemetry=(0, 0, 12000, 4, 0) diag=(5, 4, 500, 0)
+   7.1s TX=643 RX=7015 telemetry=(0, 0, 12000, 4, 0) diag=(5, 4, 500, 0)
+   8.1s TX=735 RX=8014 telemetry=(0, 0, 12000, 5, 0) diag=(5, 5, 500, 0)
+   9.1s TX=827 RX=9013 telemetry=(0, 0, 12000, 5, 0) diag=(5, 5, 500, 0)
+
+plateau_500: target=500, max=5.0s
+   9.4s TX=856 RX=9321 telemetry=(500, -1081, 12000, 7, 0) diag=(7, 7, 500, 0)
+  10.4s TX=947 RX=10319 telemetry=(492, 849, 12000, 7, 0) diag=(7, 7, 500, 0)
+  11.4s TX=1038 RX=11319 telemetry=(492, 1741, 12000, 7, 0) diag=(7, 7, 500, 0)
+  12.4s TX=1129 RX=12318 telemetry=(495, 1690, 12000, 7, 0) diag=(7, 7, 500, 0)
+  13.4s TX=1221 RX=13317 telemetry=(497, 1612, 12000, 7, 0) diag=(7, 7, 500, 0)
+STATS {"target": 500, "samples": 4993, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 496.79469203805706, "tail_mean_error_pct": -0.6410615923885871, "tail_max_abs_error_pct": 1.0, "peak_above_command_rpm": 0, "peak_below_command_rpm": 10, "stage": "plateau_500"}
+
+plateau_600: target=600, max=5.0s
+  14.4s TX=1314 RX=14314 telemetry=(498, 1265, 12000, 7, 0) diag=(7, 7, 500, 0)
+  15.4s TX=1405 RX=15314 telemetry=(506, 2119, 12000, 7, 0) diag=(7, 7, 600, 0)
+  16.4s TX=1497 RX=16313 telemetry=(522, 2433, 12000, 7, 0) diag=(7, 7, 600, 0)
+  17.4s TX=1589 RX=17312 telemetry=(543, 2576, 12000, 7, 0) diag=(7, 7, 600, 0)
+  18.4s TX=1681 RX=18311 telemetry=(568, 2719, 12000, 7, 0) diag=(7, 7, 600, 0)
+STATS {"target": 600, "samples": 4994, "tail_samples": 1998, "tail_valid_fraction": 1.0, "tail_mean_rpm": 568.1026026026026, "tail_mean_error_pct": -5.316232899566235, "tail_max_abs_error_pct": 9.5, "peak_above_command_rpm": 0, "peak_below_command_rpm": 102, "stage": "plateau_600"}
+
+plateau_700: target=700, max=5.0s
+  19.4s TX=1773 RX=19308 telemetry=(594, 2714, 12000, 7, 0) diag=(7, 7, 600, 0)
+  20.4s TX=1864 RX=20308 telemetry=(620, 2473, 12000, 7, 0) diag=(7, 7, 700, 0)
+  21.4s TX=1956 RX=21307 telemetry=(646, 2298, 12000, 7, 0) diag=(7, 7, 700, 0)
+  22.4s TX=2048 RX=22306 telemetry=(671, 2329, 12000, 7, 0) diag=(7, 7, 700, 0)
+  23.4s TX=2139 RX=23305 telemetry=(696, 2214, 12000, 7, 0) diag=(7, 7, 700, 0)
+STATS {"target": 700, "samples": 4994, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 695.308462694041, "tail_mean_error_pct": -0.6702196151369922, "tail_max_abs_error_pct": 4.142857142857142, "peak_above_command_rpm": 19, "peak_below_command_rpm": 106, "stage": "plateau_700"}
+
+plateau_500: target=500, max=5.0s
+  24.4s TX=2232 RX=24302 telemetry=(719, 1897, 12000, 7, 0) diag=(7, 7, 700, 0)
+  25.4s TX=2323 RX=25302 telemetry=(717, 814, 12000, 7, 0) diag=(7, 7, 500, 0)
+  26.4s TX=2415 RX=26301 telemetry=(690, 843, 12000, 7, 0) diag=(7, 7, 500, 0)
+  27.4s TX=2507 RX=27300 telemetry=(661, 721, 12000, 7, 0) diag=(7, 7, 500, 0)
+  28.4s TX=2599 RX=28299 telemetry=(632, 975, 12000, 7, 0) diag=(7, 7, 500, 0)
+STATS {"target": 500, "samples": 4993, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 632.3475212819229, "tail_mean_error_pct": 26.469504256384585, "tail_max_abs_error_pct": 32.2, "peak_above_command_rpm": 224, "peak_below_command_rpm": 0, "stage": "plateau_500"}
+
+plateau_400: target=400, max=5.0s
+  29.4s TX=2692 RX=29294 telemetry=(606, 842, 12000, 7, 0) diag=(7, 7, 500, 0)
+  30.4s TX=2784 RX=30295 telemetry=(580, 1010, 12000, 7, 0) diag=(7, 7, 400, 0)
+  31.4s TX=2875 RX=31294 telemetry=(555, 874, 12000, 7, 0) diag=(7, 7, 400, 0)
+  32.4s TX=2968 RX=32293 telemetry=(532, 899, 12000, 7, 0) diag=(7, 7, 400, 0)
+  33.4s TX=3059 RX=33292 telemetry=(509, 988, 12000, 7, 0) diag=(7, 7, 400, 0)
+STATS {"target": 400, "samples": 4994, "tail_samples": 1998, "tail_valid_fraction": 1.0, "tail_mean_rpm": 509.30680680680683, "tail_mean_error_pct": 27.326701701701705, "tail_max_abs_error_pct": 33.0, "peak_above_command_rpm": 206, "peak_below_command_rpm": 0, "stage": "plateau_400"}
+
+plateau_500: target=500, max=5.0s
+  34.4s TX=3152 RX=34289 telemetry=(487, 922, 12000, 7, 0) diag=(7, 7, 400, 0)
+  35.4s TX=3243 RX=35289 telemetry=(476, 1344, 12000, 7, 0) diag=(7, 7, 500, 0)
+  36.4s TX=3335 RX=36288 telemetry=(475, 1626, 12000, 7, 0) diag=(7, 7, 500, 0)
+  37.4s TX=3427 RX=37287 telemetry=(477, 1487, 12000, 7, 0) diag=(7, 7, 500, 0)
+  38.4s TX=3518 RX=38286 telemetry=(479, 1489, 12000, 7, 0) diag=(7, 7, 500, 0)
+STATS {"target": 500, "samples": 4993, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 479.35953930896346, "tail_mean_error_pct": -4.1280921382073075, "tail_max_abs_error_pct": 4.6, "peak_above_command_rpm": 0, "peak_below_command_rpm": 26, "stage": "plateau_500"}
+
+round_1_700: target=700, max=3.0s
+  39.4s TX=3611 RX=39282 telemetry=(482, 1511, 12000, 7, 0) diag=(7, 7, 500, 0)
+  40.4s TX=3702 RX=40282 telemetry=(492, 2291, 12000, 7, 0) diag=(7, 7, 700, 0)
+  41.4s TX=3794 RX=41281 telemetry=(510, 2209, 12000, 7, 0) diag=(7, 7, 700, 0)
+STATS {"target": 700, "samples": 2997, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 510.66099148723083, "tail_mean_error_pct": -27.048429787538453, "tail_max_abs_error_pct": 29.714285714285715, "peak_above_command_rpm": 0, "peak_below_command_rpm": 218, "stage": "round_1_700"}
+
+round_1_500: target=500, max=3.0s
+  42.4s TX=3887 RX=42279 telemetry=(532, 2855, 12000, 7, 0) diag=(7, 7, 700, 0)
+  43.4s TX=3978 RX=43279 telemetry=(546, 1651, 12000, 7, 0) diag=(7, 7, 500, 0)
+  44.4s TX=4070 RX=44277 telemetry=(535, 905, 12000, 7, 0) diag=(7, 7, 500, 0)
+STATS {"target": 500, "samples": 2997, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 532.6349524286429, "tail_mean_error_pct": 6.526990485728584, "tail_max_abs_error_pct": 9.2, "peak_above_command_rpm": 46, "peak_below_command_rpm": 0, "stage": "round_1_500"}
+
+round_2_700: target=700, max=3.0s
+  45.4s TX=4163 RX=45276 telemetry=(512, 794, 12000, 7, 0) diag=(7, 7, 500, 0)
+  46.4s TX=4254 RX=46276 telemetry=(509, 1821, 12000, 7, 0) diag=(7, 7, 700, 0)
+  47.4s TX=4346 RX=47275 telemetry=(522, 2342, 12000, 7, 0) diag=(7, 7, 700, 0)
+STATS {"target": 700, "samples": 2997, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 522.5998998497747, "tail_mean_error_pct": -25.342871450032185, "tail_max_abs_error_pct": 27.285714285714285, "peak_above_command_rpm": 0, "peak_below_command_rpm": 194, "stage": "round_2_700"}
+
+round_2_500: target=500, max=3.0s
+  48.4s TX=4439 RX=48273 telemetry=(541, 2183, 12000, 7, 0) diag=(7, 7, 700, 0)
+  49.4s TX=4531 RX=49272 telemetry=(550, 1141, 12000, 7, 0) diag=(7, 7, 500, 0)
+  50.4s TX=4624 RX=50270 telemetry=(535, 948, 12000, 7, 0) diag=(7, 7, 500, 0)
+STATS {"target": 500, "samples": 2996, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 533.6479719579369, "tail_mean_error_pct": 6.729594391587375, "tail_max_abs_error_pct": 10.0, "peak_above_command_rpm": 50, "peak_below_command_rpm": 0, "stage": "round_2_500"}
+
+round_3_700: target=700, max=3.0s
+  51.4s TX=4716 RX=51269 telemetry=(511, 921, 12000, 7, 0) diag=(7, 7, 500, 0)
+  52.4s TX=4807 RX=52269 telemetry=(508, 1777, 12000, 7, 0) diag=(7, 7, 700, 0)
+  53.4s TX=4899 RX=53268 telemetry=(522, 2299, 12000, 7, 0) diag=(7, 7, 700, 0)
+STATS {"target": 700, "samples": 2997, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 522.5703555332999, "tail_mean_error_pct": -25.347092066671443, "tail_max_abs_error_pct": 27.42857142857143, "peak_above_command_rpm": 0, "peak_below_command_rpm": 194, "stage": "round_3_700"}
+
+round_3_500: target=500, max=3.0s
+  54.4s TX=4991 RX=54266 telemetry=(541, 2351, 12000, 7, 0) diag=(7, 7, 700, 0)
+  55.4s TX=5082 RX=55267 telemetry=(550, 1459, 12000, 7, 0) diag=(7, 7, 500, 0)
+  56.4s TX=5173 RX=56266 telemetry=(535, 1045, 12000, 7, 0) diag=(7, 7, 500, 0)
+STATS {"target": 500, "samples": 2998, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 533.4857285928894, "tail_mean_error_pct": 6.697145718577873, "tail_max_abs_error_pct": 10.0, "peak_above_command_rpm": 50, "peak_below_command_rpm": 0, "stage": "round_3_500"}
+
+hold_500: target=500, max=30.0s
+  57.4s TX=5266 RX=57264 telemetry=(511, 855, 12000, 7, 0) diag=(7, 7, 500, 0)
+  58.4s TX=5357 RX=58267 telemetry=(498, 1161, 12000, 7, 0) diag=(7, 7, 500, 0)
+  59.4s TX=5448 RX=59266 telemetry=(495, 1344, 12000, 7, 0) diag=(7, 7, 500, 0)
+  60.4s TX=5540 RX=60265 telemetry=(494, 1489, 12000, 7, 0) diag=(7, 7, 500, 0)
+  61.4s TX=5632 RX=61264 telemetry=(494, 1420, 12000, 7, 0) diag=(7, 7, 500, 0)
+  62.4s TX=5723 RX=62263 telemetry=(495, 1529, 12000, 7, 0) diag=(7, 7, 500, 0)
+  63.4s TX=5815 RX=63262 telemetry=(496, 1414, 12000, 7, 0) diag=(7, 7, 500, 0)
+  64.4s TX=5908 RX=64261 telemetry=(496, 1381, 12000, 7, 0) diag=(7, 7, 500, 0)
+  65.4s TX=6000 RX=65260 telemetry=(497, 1366, 12000, 7, 0) diag=(7, 7, 500, 0)
+  66.4s TX=6092 RX=66259 telemetry=(497, 1592, 12000, 7, 0) diag=(7, 7, 500, 0)
+  67.4s TX=6183 RX=67258 telemetry=(498, 1398, 12000, 7, 0) diag=(7, 7, 500, 0)
+  68.4s TX=6275 RX=68257 telemetry=(498, 1612, 12000, 7, 0) diag=(7, 7, 500, 0)
+  69.4s TX=6367 RX=69256 telemetry=(498, 1399, 12000, 7, 0) diag=(7, 7, 500, 0)
+  70.4s TX=6459 RX=70255 telemetry=(499, 1358, 12000, 7, 0) diag=(7, 7, 500, 0)
+  71.4s TX=6551 RX=71254 telemetry=(499, 1621, 12000, 7, 0) diag=(7, 7, 500, 0)
+  72.4s TX=6643 RX=72253 telemetry=(499, 1298, 12000, 7, 0) diag=(7, 7, 500, 0)
+  73.4s TX=6735 RX=73252 telemetry=(499, 1520, 12000, 7, 0) diag=(7, 7, 500, 0)
+  74.4s TX=6826 RX=74251 telemetry=(499, 1510, 12000, 7, 0) diag=(7, 7, 500, 0)
+  75.4s TX=6918 RX=75250 telemetry=(499, 1403, 12000, 7, 0) diag=(7, 7, 500, 0)
+  76.4s TX=7011 RX=76249 telemetry=(499, 1479, 12000, 7, 0) diag=(7, 7, 500, 0)
+  77.4s TX=7103 RX=77248 telemetry=(499, 1546, 12000, 7, 0) diag=(7, 7, 500, 0)
+  78.4s TX=7194 RX=78247 telemetry=(500, 1417, 12000, 7, 0) diag=(7, 7, 500, 0)
+  79.4s TX=7286 RX=79246 telemetry=(499, 1190, 12000, 7, 0) diag=(7, 7, 500, 0)
+  80.4s TX=7378 RX=80245 telemetry=(500, 1308, 12000, 7, 0) diag=(7, 7, 500, 0)
+  81.4s TX=7469 RX=81243 telemetry=(499, 1460, 12000, 7, 0) diag=(7, 7, 500, 0)
+  82.4s TX=7562 RX=82242 telemetry=(500, 1410, 12000, 7, 0) diag=(7, 7, 500, 0)
+  83.4s TX=7654 RX=83240 telemetry=(500, 1640, 12000, 7, 0) diag=(7, 7, 500, 0)
+  84.4s TX=7746 RX=84238 telemetry=(500, 1310, 12000, 7, 0) diag=(7, 7, 500, 0)
+  85.4s TX=7837 RX=85237 telemetry=(499, 1312, 12000, 7, 0) diag=(7, 7, 500, 0)
+  86.4s TX=7929 RX=86236 telemetry=(499, 1493, 12000, 7, 0) diag=(7, 7, 500, 0)
+STATS {"target": 500, "samples": 29949, "tail_samples": 1997, "tail_valid_fraction": 1.0, "tail_mean_rpm": 499.13420130195294, "tail_mean_error_pct": -0.17315973960941164, "tail_max_abs_error_pct": 0.2, "peak_above_command_rpm": 11, "peak_below_command_rpm": 6, "stage": "hold_500"}
+
+link_loss: target=500, max=5s
+  87.4s TX=8019 RX=87213 telemetry=(499, 1555, 12000, 7, 0) diag=(7, 7, 500, 0)
+  88.4s TX=8019 RX=88217 telemetry=(499, 1488, 12000, 8, 0) diag=(56, 8, 500, 50002)
+  89.4s TX=8019 RX=89214 telemetry=(499, 1488, 12000, 8, 0) diag=(56, 8, 500, 50002)
+  90.4s TX=8019 RX=90214 telemetry=(499, 1488, 12000, 8, 0) diag=(56, 8, 500, 50002)
+  91.4s TX=8019 RX=91213 telemetry=(499, 1488, 12000, 10, 0) diag=(56, 10, 500, 50002)
+completed; review tracking metrics (not automatic performance acceptance)
+Logs: C:\Users\Administrator\Downloads\T440p-Code\BLDC_FOC_G431_SENSORLESS_20261013-214224\can_sweep_logs\20261013_214341_381899

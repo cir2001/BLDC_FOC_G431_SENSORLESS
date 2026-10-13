@@ -1,0 +1,3 @@
+Snapshot --check: PASS, 45 files match current workspace.
+Temporary copy --apply: PASS; modified file restored, missing file restored, extra file removed after recovery backup. Recovery contents verified.
+No build, flash, or workspace restore performed.
